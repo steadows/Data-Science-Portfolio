@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test TOC Width</title>
+<style type="text/css">
+  .main-container {
+    max-width: 100%;
+    margin-left: 520px; /* Adjust this value based on TOC width */
+  }
+
+  #TOC {
+    width: 500px; /* Adjust the width */
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    overflow-y: auto;
+    background: #f8f8f8; /* Optional: background color for TOC */
+    padding: 20px;
+  }
+
+  .toc-content {
+    padding-left: 1px;
+    padding-right: 1px;
+  }
+
+  div.main-container {
+    max-width: 100%;
+  }
+
+  div.tocify {
+    width: 50%;
+    max-width: 100px;
+    max-height: 85%;
+  }
+</style>
+</head>
+<body>
+  <div id="TOC">
+    <div class="toc-content">
+      <!-- TOC Content Here -->
+    </div>
+  </div>
+  <div class="main-container">
+    <!-- Main Content Here -->
+  </div>
+</body>
+</html>

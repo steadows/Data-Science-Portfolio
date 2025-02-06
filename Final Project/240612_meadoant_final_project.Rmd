@@ -1,0 +1,1988 @@
+---
+title: "Gun Violence Data Analysis"
+author: "Steve Meadows"
+date: "2024-07-24"
+output: 
+   html_document:
+    theme: flatly
+    toc: yes
+    toc_float:
+      collapsed: true
+    code_folding: hide
+    number_sections: true
+    css: styles.css
+---
+
+```{r setup, include=FALSE, }
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE )
+```
+
+# Introduction
+
+## Description
+
+Information on instances of gun violence documented in the United States from 
+January 2013 through March 2018. Note that gun violence incidents in 2013 are 
+not all included, with only 279 incidents from 2013 in this data set, notably 
+missing the Las Vegas Mass Shooting. The data is contained in gunViolenceGeo.csv.
+
+## Source
+Data was obtained from the GitHub repo 
+https://github.com/jamesqo/gun-violence-data, which originally obtained the 
+data from the Gun Violence Archive’s website. From the organization’s 
+description:
+
+## Source description
+
+Gun Violence Archive (GVA) is a not for profit corporation formed in 2013 to 
+provide free online public access to accurate information about gun-related 
+violence in the United States. GVA will collect and check for accuracy, 
+comprehensive information about gun-related violence in the U.S. and then post 
+and disseminate it online.
+
+Although there are possible limitations in its comprehensiveness, research 
+supports the utility of the data provided by the Gun Violence Archive for public 
+health research and quantifying the amount of gun violence occurring throughout 
+the United States.
+
+
+## Load R Packages
+
+```{r class.source = 'fold-show'}
+library(tidyverse)
+library(gapminder)
+library(skimr)
+library(ggthemes)
+library(flextable)
+library(dplyr)
+library(naniar)
+library(lubridate)
+library(tidyr)
+library(sf)
+library(mapview)
+library(maps)
+library(naniar)
+library(plotly) 
+library(ggpubr)
+library(ggcorrplot)
+library(scales)
+library(tidymodels)
+library(car)
+library(infer)
+library(htmltools)
+library(leaflet)
+```
+
+## Importing data
+
+```{r class.source = 'fold-show'}
+gunViolence <- read_csv("gunViolenceGeo.csv")
+census_df <- read_csv("https://raw.githubusercontent.com/dilernia/STA418-518/main/Data/census_data_state_2008-2021.csv")
+county_census_df <- read_csv(
+  "https://raw.githubusercontent.com/dilernia/STA418-518/main/Data/census_data_county_2009-2021.csv")
+```
+
+# Gun Violence Data Dictionary
+
+```{r}
+# Create the data dictionary
+dataDictionary <- tibble(
+  Variable = colnames(gunViolence),
+  Description = c(
+    "Geographic ID",
+    "gunviolencearchive.org ID for incident",
+    "date of occurrence",
+    "state",
+    "city or county",
+    "address where incident took place",
+    "number of people killed",
+    "number of people injured",
+    "link to gunviolencearchive.org webpage containing details of incident",
+    "link to online news story concerning incident",
+    "ignore, always False",
+    "congressional district",
+    "key: gun ID, value: 'Unknown' or 'Stolen'",
+    "key: gun ID, value: description of gun type",
+    "list of incident characteristics",
+    "latitude",
+    "description of location where incident took place",
+    "longitude",
+    "number of guns involved",
+    "additional notes about the incident",
+    "key: participant ID",
+    "key: participant ID, value: description of age group, e.g. 'Adult 18+'",
+    "key: participant ID, value: 'Male' or 'Female'",
+    "key: participant ID",
+    "key: participant ID, value: relationship of participant to other participants",
+    "key: participant ID, value: 'Arrested', 'Killed', 'Injured', or 'Unharmed'",
+    "key: participant ID, value: 'Victim' or 'Subject-Suspect'",
+    "links to online news stories concerning incident",
+    "state house district",
+    "state senate district",
+    "full address where incident took place"
+  ),
+  Type = map_chr(gunViolence, .f = function(x) { typeof(x)[1] }),
+  Class = map_chr(gunViolence, .f = function(x) { class(x)[1] })
+)
+
+# Print the data dictionary
+data_dict_ft <-flextable(dataDictionary) |>
+  add_header_row(values = "Table 1: Data Dictionary", colwidths = 4) |>
+  padding(padding = 3, part = "all") |>
+  add_footer_lines(values = "Source: Gun Violence Archive") |>
+  set_table_properties(width = 1, layout = "autofit")|>
+  colformat_double(j = 2:4, digits = 2) |>
+  theme_vanilla() |>
+  autofit()
+
+data_dict_ft
+```
+
+## Exploring high level data characteristics
+
+```{r}
+skim(gunViolence)
+```
+
+# Data Cleaning
+
+I wanted to start pruning the data by starting with the most relevant and
+complete data. As stated in the description, the data is incomplete for the
+years 2013 and 2018. I proceeded to filter the data for the four years in
+between. Additionally, I made the data easier to work with by converting dates
+to datetime to extract chronological information.
+
+```{r}
+# Extract the year from the date column using stringr
+gunViolence <- gunViolence |>
+  mutate(year = as.integer(str_sub(date, 1, 4)))
+
+# Filter data for the years 2014 to 2017
+gunViolence <- gunViolence |>
+  filter(year >= 2014 & year <= 2017)
+
+# Change date column to datetime
+gunViolence <- gunViolence |>
+  mutate(date = as.Date(date, format = "%Y-%m-%d"))
+
+# Extract the year and month from the date column
+gunViolence <- gunViolence |>
+  mutate(
+    month = format(date, "%m")
+  )
+
+# Use stringr to remove text within parentheses in the city_or_county column
+gunViolence <- gunViolence |>
+  mutate(city_or_county = str_replace_all(city_or_county, "\\s*\\([^\\)]+\\)", ""))
+
+# Trim any leading or trailing whitespace
+gunViolence <- gunViolence |>
+  mutate(city_or_county = str_trim(city_or_county))
+```
+
+## Data Missingness
+
+### Plotting missingness for all data features
+
+I began by examining the null values within the data and how to address them.
+Given the robust amount of information provided about these gun violence
+incidents, as well as the other datasets available to me regarding U.S. census
+data at the county, city, and state levels, I knew that location variables were
+important. I plotted all missing data and then visualized the missingness in
+relation to location.
+
+```{r}
+gg_miss_var(gunViolence, show_pct = TRUE)
+```
+
+## Plotting geolocation feature missingness
+
+This visualization provides a closer look at location-level information by
+state. After creating the heatmap to observe the percentage of rows with null
+location information, I observed that missing `lat` and `long`
+coordinates were part and parcel to missing `geoid` values, which are
+extremely salient for analysis. This may suggest that these states weren't as
+diligent in capturing that kind of data, or were negligent. States that were
+pushing the upper bounds of location missingness proportions were:
+
+* Idaho
+* Indiana
+* South Dakota
+* Virginia
+* West Virginia
+
+```{r}
+gunViolence |>
+  dplyr::select(
+    geoid,
+    lat,
+    long,
+    state
+  ) |>
+  gg_miss_fct(fct = state) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+ 
+```
+
+## Addressing important missing `geoid` data
+
+To address geoid missingness, I compared incidents without IDs to ones that
+had them, by city, state, and year. If they were the same, I copied the geoid
+over and merged it back into the dataset. Here is an an examination of
+missingness after the merge. Here we can see that we went from over 8,000 
+missing `geoid` values to 443 and a completeness rate of 99.8% for the variable.
+
+```{r}
+# Identify rows with missing geoid
+missing_geoid <- gunViolence |>
+  filter(is.na(geoid))
+
+# Identify rows with non-missing geoid
+non_missing_geoid <- gunViolence |>
+  filter(!is.na(geoid)) |>
+  group_by(state, city_or_county, year) |>
+  summarise(geoid = first(geoid), .groups = 'drop')
+
+# Perform the matching and fill in the missing geoid values
+filled_data <- missing_geoid |>
+  left_join(non_missing_geoid, by = c("state", "city_or_county", "year")) |>
+  mutate(geoid = if_else(is.na(geoid.x), geoid.y, geoid.x)) |>
+  select(-geoid.x, -geoid.y)
+
+# Combine the filled rows with the original data excluding the previously missing rows
+final_data <- gunViolence |>
+  filter(!is.na(geoid)) |>
+  bind_rows(filled_data)
+
+skim(final_data$geoid)
+```
+
+## Reviewing missingness after cleaning
+
+This improved my location accuracy immensely. Hawaii, Idaho, Vermont, and West
+Virginia were the only states left facing higher proportions of missingness, which
+topped out at just over 1%. As one reads deeper, we will see that in
+terms of incidents and deaths, these states are not as relevant.
+
+
+```{r}
+final_data |>
+  dplyr::select(
+    geoid,
+    state
+  ) |>
+  gg_miss_fct(fct = state) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+ 
+```
+```{r}
+# Calculate count of missing values for each state
+missing_counts <- final_data |>
+  dplyr::select(geoid, state) |>
+  group_by(state) |>
+  summarise(missing_count = sum(is.na(geoid))) |>
+  ungroup()
+
+# Create a bar plot to show the count of missing values
+ggplot(missing_counts, aes(x = reorder(state, -missing_count), y = missing_count)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(
+    x = "State",
+    y = "Count of Missing geoid",
+    title = "Count of Missing geoid by State",
+    subtitle = "Based on final_data"
+  )
+```
+
+## Missingness Reflection
+
+My method of matching locations from the same year to cross-reference
+geographical IDs worked to reduce the number of missing values. As we can see,
+the highest numbers of null values exist in high-incident states. In the scheme
+of things, this should not significantly affect the accuracy of our data.
+
+# EDA
+
+## Country Wide Year-level Summary Statistics
+
+```{r}
+# Calculate the count of incidents per year
+yearly_counts <- final_data |>
+  group_by(year) |>
+  summarise(
+    incidents = n(),
+    n_killed = sum(n_killed),
+    n_injured = sum(n_injured)
+  )
+
+# Convert the year column to a character to avoid comma formatting
+yearly_counts$year <- as.character(yearly_counts$year)
+
+# Display the yearly counts using flextable
+yearly_counts_ft <- yearly_counts |>
+  flextable() |>
+  set_header_labels(
+    year = "Year",
+    incidents = "Incidents",
+    n_killed = "Killed",
+    n_injured = "Injured"
+  ) |>
+  add_header_row(
+    values = "Table 2: Aggregate Sum of U.S. Gun Violence Incidents, Deaths, and Injuries per Year", 
+    colwidths = 4
+  ) |>  
+  padding(padding = 3, part = "all") |>
+  theme_vanilla() |>
+  autofit()
+
+# Print the flextable
+yearly_counts_ft
+```
+
+## Country Wide Year-level Summary Statistics
+
+```{r}
+# Calculate summary statistics for incidents, n_killed, and n_injured per year
+summary_year <- yearly_counts |>
+  reframe(
+    Statistic = c("Minimum", "Q1", "Median", "Mean (μ)", "Q3", "Maximum", "SD (σ)"),
+    Incidents = c(
+      min(incidents, na.rm = TRUE),
+      quantile(incidents, 0.25, na.rm = TRUE),
+      median(incidents, na.rm = TRUE),
+      mean(incidents, na.rm = TRUE),
+      quantile(incidents, 0.75, na.rm = TRUE),
+      max(incidents, na.rm = TRUE),
+      sd(incidents, na.rm = TRUE)
+    ),
+    Killed = c(
+      min(n_killed, na.rm = TRUE),
+      quantile(n_killed, 0.25, na.rm = TRUE),
+      median(n_killed, na.rm = TRUE),
+      mean(n_killed, na.rm = TRUE),
+      quantile(n_killed, 0.75, na.rm = TRUE),
+      max(n_killed, na.rm = TRUE),
+      sd(n_killed, na.rm = TRUE)
+    ),
+    Injured = c(
+      min(n_injured, na.rm = TRUE),
+      quantile(n_injured, 0.25, na.rm = TRUE),
+      median(n_injured, na.rm = TRUE),
+      mean(n_injured, na.rm = TRUE),
+      quantile(n_injured, 0.75, na.rm = TRUE),
+      max(n_injured, na.rm = TRUE),
+      sd(n_injured, na.rm = TRUE)
+    )
+  ) |>
+  mutate_if(is.numeric, round, digits = 2)
+
+summary_year_ft <- flextable(summary_year) |>
+  add_header_row(values = "Table 3: U.S. Summary Statistics of Gun Violence Incidents, Deaths, and Injuries per Year (2014-2017)", colwidths = 4) |>
+  padding(padding = 3, part = "all") |>
+  add_footer_lines(values = "Source: Gun Violence Archive") |>
+  colformat_double(j = 2:4, digits = 2)|>
+  theme_vanilla() |>
+  autofit()
+
+
+summary_year_ft
+```
+Here are the statistical summary statistics for our gun violence incidents for
+the entire US for our years of concern.
+
+## Visualization: Histogram of Monthly Incidents per Year
+
+```{r fig.width= 12, fig.height= 8}
+# Create the faceted histogram
+ggplot(final_data, aes(x = month)) +
+  geom_histogram(stat = "count", fill = "steelblue") +
+  facet_grid(year ~ .) +
+  labs(
+    title = "Monthly Gun Violence Incidents",
+    x = "Month",
+    y = "Number of Incidents",
+    caption = "Source: Gun Violence Archive"
+  ) +
+  theme_minimal() +
+  scale_x_discrete(labels = month.abb)  # Use abbreviated month names
+
+```
+
+I next broke each year of gun violence incidents down by month. An interesting
+trend emerges with this histogram. With the exception of a peak in incidents in
+January, we notice that incidents start to increase as the warmer months
+approach.
+
+## Gun Violence - State Level
+
+I began analyzing this data by examining gun violence at the state level for the
+most recent year, as 2017 has the highest number of incidents.
+
+### State-level Summary Statistics for Top 15 States
+
+```{r}
+# Summarize the number of incidents per state
+state_counts_all_years <- final_data |>
+  filter(state != "District of Columbia") |>
+  group_by(state, year) |>
+  summarise(
+    count = n(),
+    n_killed = sum(n_killed),
+    n_injured = sum(n_injured)
+    ) |>
+  arrange(desc(count))
+
+# Calculate the average count for each state over all years
+state_avg_counts <- state_counts_all_years %>%
+  group_by(state) %>%
+  summarize(avg_count = mean(count, na.rm = TRUE)) %>%
+  arrange(desc(avg_count))
+
+# Select the top 15 states by average count
+top_15_states <- state_avg_counts %>% slice(1:15)
+
+# Filter the original data for these top 15 states
+top_15_data <- state_counts_all_years %>% filter(state %in% top_15_states$state)
+
+# Generate the summary statistics for each of the top 15 states
+summary_stats <- top_15_data %>%
+  group_by(state) %>%
+  summarize(
+    min_count = min(count, na.rm = TRUE),
+    q1_count = quantile(count, 0.25, na.rm = TRUE),
+    median_count = median(count, na.rm = TRUE),
+    mean_count = mean(count, na.rm = TRUE),
+    q3_count = quantile(count, 0.75, na.rm = TRUE),
+    max_count = max(count, na.rm = TRUE),
+    sd_count = sd(count, na.rm = TRUE),
+    min_killed = min(n_killed, na.rm = TRUE),
+    q1_killed = quantile(n_killed, 0.25, na.rm = TRUE),
+    median_killed = median(n_killed, na.rm = TRUE),
+    mean_killed = mean(n_killed, na.rm = TRUE),
+    q3_killed = quantile(n_killed, 0.75, na.rm = TRUE),
+    max_killed = max(n_killed, na.rm = TRUE),
+    sd_killed = sd(n_killed, na.rm = TRUE),
+    min_injured = min(n_injured, na.rm = TRUE),
+    q1_injured = quantile(n_injured, 0.25, na.rm = TRUE),
+    median_injured = median(n_injured, na.rm = TRUE),
+    mean_injured = mean(n_injured, na.rm = TRUE),
+    q3_injured = quantile(n_injured, 0.75, na.rm = TRUE),
+    max_injured = max(n_injured, na.rm = TRUE),
+    sd_injured = sd(n_injured, na.rm = TRUE)
+  )
+
+# Round all summary statistics
+summary_stats <- summary_stats %>%
+  mutate(across(where(is.numeric), round, digits = 0))
+
+# Split the summary statistics into three different data frames
+summary_incidents <- summary_stats %>%
+  select(state, min_count, q1_count, median_count, mean_count, q3_count, max_count, sd_count)
+
+summary_killed <- summary_stats %>%
+  select(state, min_killed, q1_killed, median_killed, mean_killed, q3_killed, max_killed, sd_killed)
+
+summary_injured <- summary_stats %>%
+  select(state, min_injured, q1_injured, median_injured, mean_injured, q3_injured, max_injured, sd_injured)
+
+# Convert each summary statistics data frame to a flextable
+ft_incidents <- flextable(summary_incidents) %>%
+  set_header_labels(
+    state = "State",
+    min_count = "Min Incident", q1_count = "Q1 Incident", median_count = "Median Incident", 
+    mean_count = "Mean Incident", q3_count = "Q3 Incident", max_count = "Max Incident", 
+    sd_count = "SD Incident"
+  ) %>%
+  add_header_row(values = "Table 4a: Summary Statistics of Gun Violence Incidents by state (2017)", colwidths = 8) %>%
+  padding(padding = 3, part = "all") %>%
+  add_footer_lines(values = "Source: Gun Violence Archive") %>%
+  theme_vanilla() %>%
+  autofit()
+
+ft_killed <- flextable(summary_killed) %>%
+  set_header_labels(
+    state = "State",
+    min_killed = "Min Killed", q1_killed = "Q1 Killed", median_killed = "Median Killed", 
+    mean_killed = "Mean Killed", q3_killed = "Q3 Killed", max_killed = "Max Killed", 
+    sd_killed = "SD Killed"
+  ) %>%
+  add_header_row(values = "Table 4b: Summary Statistics of Gun Violence Deaths by state (2017)", colwidths = 8) %>%
+  padding(padding = 3, part = "all") %>%
+  add_footer_lines(values = "Source: Gun Violence Archive") %>%
+  theme_vanilla() %>%
+  autofit()
+
+ft_injured <- flextable(summary_injured) %>%
+  set_header_labels(
+    state = "State",
+    min_injured = "Min Injured", q1_injured = "Q1 Injured", median_injured = "Median Injured", 
+    mean_injured = "Mean Injured", q3_injured = "Q3 Injured", max_injured = "Max Injured", 
+    sd_injured = "SD Injured"
+  ) %>%
+  add_header_row(values = "Table 4c: Summary Statistics of Gun Violence Injuries by state (2017)", colwidths = 8) %>%
+  padding(padding = 3, part = "all") %>%
+  add_footer_lines(values = "Source: Gun Violence Archive") %>%
+  theme_vanilla() %>%
+  autofit()
+
+# Print the flextables
+ft_incidents
+```
+
+```{r}
+ft_killed
+```
+
+```{r}
+ft_injured
+```
+
+### Visualization: Bar graph of Incidents by state
+
+```{r}
+# filtering for the year 2017
+gun_data_2017 <- final_data |>
+  filter(format(as.Date(date), "%Y") == "2017")
+
+# Summarize the number of incidents per state
+state_counts <- gun_data_2017 |>
+  group_by(state) |>
+  summarise(count = n()) |>
+  arrange(desc(count))
+
+# Convert the state column to a factor with levels ordered by count
+gun_data_2017 <- gun_data_2017 |>
+  mutate(state = factor(state, levels = state_counts$state))
+
+gun_data_2017 |>
+  ggplot(
+    aes(
+      x = state
+    )
+  ) +
+  geom_bar(binwidth = 1, fill = "steelblue", boundary = 0) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.1))) +
+  # scale_x_continuous(limits = c(0, 14), breaks = seq(0, 14, by = 2)) +  
+  labs(
+    y = "Number of Incidents",
+    x = "State",
+    title = "Total number of gun-violence incidents by state",
+    subtitle = "Year 2017",
+    caption = "Source: Gun Violence Archive"
+  ) + 
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )
+```
+
+Looking at this initial visualization, we can see some staggering levels of gun
+violence in certain states. However, most of the states with high levels of gun
+violence are also some of the most densely populated in the country. I decided
+to analyze the same data while controlling for population.
+
+
+
+### Census Data Cleaning
+
+```{r}
+census_df <- census_df |>
+  filter(year >= 2014, year <=2017)
+
+# Filtering census data for 2017
+census_df_2017 <- census_df |>
+  filter(year == 2017)
+
+# Aggregating population by state
+census_df_2017_pop_by_state <- census_df_2017 |>
+  group_by(county_state, year, geoid) |>
+  summarise(population = sum(population), .groups = 'drop')
+```
+
+### Examining high-level data characteristics
+
+```{r}
+skim(census_df)
+```
+
+### Visualization: Bar Graph of Incidents by state per 100,000 people
+
+```{r}
+# Summarize the number of incidents per state
+state_counts <- gun_data_2017 |>
+  group_by(state) |>
+  summarise(count = n()) |>
+  arrange(desc(count))
+
+# Merge with population data
+state_counts <- state_counts |>
+  left_join(census_df_2017_pop_by_state, by = c("state" = "county_state"))
+
+# Calculate incidents per 100,000 people
+state_counts <- state_counts |>
+  mutate(incidents_per_100k = (count / population) * 100000)
+
+# Convert the state column to a factor with levels ordered by incidents_per_100k
+state_counts <- state_counts |>
+  mutate(state = factor(state, levels = state[order(incidents_per_100k, decreasing = TRUE)]))
+
+# Create the bar chart
+ggplot(state_counts, aes(x = state, y = incidents_per_100k)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    y = "Incidents per 100,000 People",
+    x = "State",
+    title = "Gun Violence Incidents per 100,000 People by State",
+    subtitle = "Year 2017",
+    caption = "Source: Gun Violence Archive & U.S. Census Bureau"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )
+```
+
+After controlling for population using the Census Bureau dataset, DC 
+has the most gun violence incidents per 100,000 people in the country for 
+this year. However, DC is not considered a state but a federal district, more 
+like a city. For the sake of analyzing like for like, I will omit it from the 
+analysis for now.
+
+### Visulization: Bar Graph of Incidents by state per 100,000 people - Removing DC
+
+```{r}
+# Summarize the number of incidents per state
+state_counts <- gun_data_2017 |>
+  filter(state != "District of Columbia") |>
+  group_by(state) |>
+  summarise(count = n()) |>
+  arrange(desc(count))
+
+# Merge with population data
+state_counts <- state_counts |>
+  left_join(census_df_2017_pop_by_state, by = c("state" = "county_state"))
+
+# Calculate incidents per 100,000 people
+state_counts <- state_counts |>
+  mutate(incidents_per_100k = (count / population) * 100000)
+
+# Convert the state column to a factor with levels ordered by incidents_per_100k
+state_counts <- state_counts |>
+  mutate(state = factor(state, levels = state[order(incidents_per_100k, decreasing = TRUE)]))
+
+# Create the bar chart
+
+ggplot(state_counts, aes(x = state, y = incidents_per_100k)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    y = "Incidents per 100,000 People",
+    x = "State",
+    title = "Gun Violence Incidents per 100,000 People by State",
+    subtitle = "Year 2017",
+    caption = "Source: Gun Violence Archive & U.S. Census Bureau"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    legend.position = "none"
+  )
+```
+
+After removing the District of Columbia, we get a better comparison between
+states. I was surprised to see Alaska taking the top spot. After some Google
+searching, I obtained records of gun ownership by state. 
+
+According to
+[World Population Review](https://worldpopulationreview.com/state-rankings/gun-ownership-by-state),
+gun ownership rates in Alaska are estimated to be 64.5%. This could potentially
+be a correlative factor in gun violence incidents within the state. It was also
+surprising to see Delaware above a state like Illinois, considering the
+anecdotes I've always heard regarding the violence in Chicago. 
+
+Interestingly enough, the inverse is true for Alaska vis-à-vis gun ownership 
+rates. Delaware ranks as the 10th lowest state proportion of gun ownership 
+at 34.4%, according to the World Population Review. Illinois ranks even lower, 
+at 7th, with 27.8%. Gun ownership seems like an interesting feature to explore, 
+but given some of the inconsistencies, I chose to press on and explore more.
+
+
+## Visualization: Interactive Map of Incidents by State
+
+Here I mapped out all 50 state's level of incidents per 100,000 people onto a
+leaflet to highlight the most gun violence prone states in 2017.
+
+```{r}
+# Downloading state-level shape files from US Census Bureau
+if(!file.exists("cb_2018_us_state_500k.zip")) {
+download.file(url = "https://www2.census.gov/geo/tiger/GENZ2018/shp/cb_2018_us_state_500k.zip",
+              destfile = "cb_2018_us_state_500k.zip")
+}
+
+# Create directory for geospatial files
+if(!dir.exists("GeoFiles")) {
+dir.create("GeoFiles")
+}
+
+# Unzipping files
+utils::unzip("cb_2018_us_state_500k.zip",
+             exdir = "GeoFiles")
+
+# Loading the shapefiles
+state_shape <- st_read("GeoFiles//cb_2018_us_state_500k.shp",
+                       quiet = TRUE)
+
+# Ensure the geoid column in state_counts is properly formatted as GEOID
+state_counts <- state_counts |>
+  mutate(GEOID = str_pad(geoid, width = 2, side = "left", pad = "0"))
+
+# Merging state_counts with state_shape shapefile
+state_shape_full <- state_shape |> 
+  left_join(state_counts, by = c("GEOID" = "GEOID"))
+
+# Remove rows with NA values
+cleaned_state_shape <- state_shape_full |>
+  drop_na()
+
+# Ensure cleaned_state_shape is an sf object if not already done
+if (!inherits(cleaned_state_shape, "sf")) {
+  cleaned_state_shape <- st_as_sf(cleaned_state_shape)
+}
+
+# Transform to WGS84 CRS to be compatible with leaflet
+cleaned_state_shape <- st_transform(cleaned_state_shape, crs = 4326)
+
+# Check for and handle missing values in key columns
+cleaned_state_shape <- cleaned_state_shape |>
+  filter(!is.na(state) & !is.na(population) & !is.na(count) & !is.na(incidents_per_100k))
+
+# Defining pop-up labels
+labels <- cleaned_state_shape |>
+  mutate(labels = paste0(
+    "<strong>", str_to_title(state), "</strong><br/>",
+    "Population: ", population, "<br/>",
+    "Incidents: ", count, "<br/>",
+    "Incidents per 100k: ", round(incidents_per_100k, 2))) |>
+  pull(labels) |>
+  lapply(htmltools::HTML)
+
+# Quantitative variable to color areal units (states) by
+myVariable <- cleaned_state_shape$incidents_per_100k
+
+# Defining nice cut points for coloring
+bins <- seq(min(myVariable, na.rm = TRUE), max(myVariable, na.rm = TRUE), length.out = 6)
+
+# Selecting color palette
+pal <- colorBin("PuBu", domain = myVariable, bins = bins)
+
+# Create the choropleth map
+myLeaflet <- leaflet(cleaned_state_shape) |>
+  setView(lng = -96, lat = 37.8, zoom = 2.4) |>
+  addProviderTiles("OpenStreetMap.Mapnik",
+                   options = providerTileOptions(
+                     id = "mapbox.light",
+                     accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) |>
+  addPolygons(
+    fillColor = ~pal(myVariable),
+    weight = 0.80,
+    opacity = 1,
+    color = "black",
+    fillOpacity = 1,
+    highlightOptions = highlightOptions(
+      color = "#666"),
+    label = labels,
+    labelOptions = labelOptions(textsize = "15px")) |>
+  addLegend(pal = pal, 
+            values = ~ myVariable, 
+            opacity = 0.7, 
+            title = "Gun Violence Incidents per 100k (2017)",
+            position = "bottomright")
+
+# Display the map
+myLeaflet
+
+
+```
+## Visualization: Boxplot Showing Range of Incidents Per Year from 2014-2017
+
+```{r} 
+# Arrange by incidents_per_100k in descending order and extract the top 15 states
+top_15_states <- state_counts |>
+  arrange(desc(incidents_per_100k)) |>
+  slice(1:15) |>
+  pull(state)
+
+# Merge with population data
+state_counts_all_years <- state_counts_all_years |>
+  left_join(census_df, by = c("state" = "county_state",
+                              "year" = "year"))
+
+# Calculate incidents per 100,000 people
+state_counts_all_years <- state_counts_all_years |>
+  mutate(incidents_per_100k = (count / population) * 100000)
+
+# Filter the state_counts_all_years DataFrame to include only the top 15 states
+filtered_data <- state_counts_all_years |>
+  filter(state %in% top_15_states)
+
+# Create the box plot
+ggplot(filtered_data, aes(x = fct_reorder(state, incidents_per_100k, .desc=FALSE ) , y = incidents_per_100k)) +
+  geom_boxplot(fill = "steelblue", alpha = 0.9) +
+  stat_boxplot(geom = "errorbar", width = 0.3, coef = 1.5) +
+  labs(
+    y = "Incidents per 100,000 People",
+    x = "State",
+    title = "Range of Gun Violence Incidents per 100,000 People by State (2014-2017)",
+    subtitle = "Top 15 States",
+    caption = "Source: Gun Violence Archive & U.S. Census Bureau"
+  ) +
+  
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(hjust = .5, vjust = 0.5)
+  )
+
+```
+
+Here we can see how the gun incident rates per 100,000 people ranged from 2014 
+to 2017 for the top 15 states.
+
+## Gun Violence - City Level
+
+Having thoroughly examined the data at the state level, it became evident that
+the broader trends and anomalies could benefit from a more granular analysis.
+Thus, I decided to adjust my aperture toward the city level. By zooming in on
+the urban centers, we can gain deeper insights into the dynamics of gun
+violence. Cities often present unique challenges and opportunities for
+intervention, and understanding the variations within these metropolitan areas
+will be crucial for formulating more effective strategies. Let's delve into the
+city-level data to uncover these nuanced patterns.
+
+### City Level Summary Statistics
+
+```{r}
+# Group by state, geoid, and city_or_county, then summarise and arrange
+sorted_city_rates_2017 <- gun_data_2017 |>
+  group_by(geoid, state, city_or_county) |>
+  summarise(count = n(), .groups = 'drop') |>
+  arrange(desc(count))
+
+# filter county data for 2017
+county_census_2017 <- county_census_df |>
+  filter(
+    year == 2017
+  )
+
+# Split the county_state column into county and state columns
+county_census_2017 <- county_census_2017 |>
+  separate(county_state, into = c("city_or_county", "state"), sep = ", ")
+
+# Merge with population data
+grouped_data <- county_census_2017  |>
+  left_join(sorted_city_rates_2017, by = c("geoid" = "geoid"))
+
+grouped_data <- grouped_data |>
+  drop_na()
+
+grouped_data <- grouped_data |>
+  rename(
+    county = city_or_county.x,
+    city = city_or_county.y,
+    state = state.x
+  ) |>
+  select(-state.y)
+
+# Calculate incidents per 100,000 people
+grouped_data <- grouped_data |>
+  mutate(incidents_per_100k = (count / population) * 100000)
+
+# Getting state abbreviations for plotting
+state_abbr_lookup <- data.frame(
+  state = c("Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia", 
+            "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", 
+            "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", 
+            "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", 
+            "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", 
+            "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"),
+  state_abbr = c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC","FL", "GA", 
+                 "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", 
+                 "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", 
+                 "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", 
+                 "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY")
+)
+# Join with the state abbreviation lookup table
+grouped_data <- grouped_data |>
+  left_join(state_abbr_lookup, by = "state")
+
+# Create a unique identifier by combining county and state
+grouped_data <- grouped_data |>
+  mutate(city_state = paste(city, state_abbr, sep = ", "))
+
+top_15_cities <- grouped_data |>
+  arrange(desc(count)) |>  # Sort by count in descending order
+  slice_head(n = 15) 
+
+# Split the county_state column into county and state columns
+county_census_df <- county_census_df |>
+  separate(county_state, into = c("city_or_county", "state"), sep = ", ")
+
+# Group by state, geoid, and city_or_county, then summarise and arrange
+sorted_city_rates_all_years <- final_data |>
+  group_by(geoid, state, city_or_county, year) |>
+  summarise(
+    count = n(),
+    n_killed = sum(n_killed),
+    n_injured = sum(n_injured),
+    .groups = 'drop'
+    ) |>
+  arrange(desc(count), city_or_county, state )
+
+# Merge with population data
+sorted_city_rates_all_years <- sorted_city_rates_all_years  |>
+  left_join(county_census_df, by = c("geoid" = "geoid",
+                                     "year" = "year"))
+
+sorted_city_rates_all_years <- sorted_city_rates_all_years |>
+  rename(state = state.x, city = city_or_county.x, county = city_or_county.y )|>
+  group_by(
+    city,
+    state,
+    year
+  ) |>
+  summarise(
+    count = sum(count),
+    n_killed = sum(n_killed),
+    n_injured = sum(n_injured),
+    .groups = 'drop'
+  )
+
+# Join with the state abbreviation lookup table
+sorted_city_rates_all_years <- sorted_city_rates_all_years |>
+  left_join(state_abbr_lookup, by = "state")
+
+# Create a unique identifier by combining county and state
+sorted_city_rates_all_years <- sorted_city_rates_all_years |>
+  mutate(city_state = paste(city, state_abbr, sep = ", "))
+
+
+# Filter sorted_city_rates_all_years to only include rows with the specified geoids
+sorted_city_rates_all_years <- sorted_city_rates_all_years %>%
+  filter(city_state %in% top_15_cities$city_state)
+
+# Generate the summary statistics for each of the top 15 states
+city_summary_stats <- sorted_city_rates_all_years %>%
+  mutate(
+    rounded_count = round(count, digits = 0),
+    rounded_n_killed = round(n_killed, digits = 0),
+    rounded_n_injured = round(n_injured, digits = 0)
+  ) %>%
+  group_by(city) %>%
+  summarize(
+    min_count = min(count, na.rm = TRUE),
+    q1_count = quantile(count, 0.25, na.rm = TRUE),
+    median_count = median(count, na.rm = TRUE),
+    mean_count = mean(count, na.rm = TRUE),
+    q3_count = quantile(count, 0.75, na.rm = TRUE),
+    max_count = max(count, na.rm = TRUE),
+    sd_count = sd(count, na.rm = TRUE),
+    min_killed = min(n_killed, na.rm = TRUE),
+    q1_killed = quantile(n_killed, 0.25, na.rm = TRUE),
+    median_killed = median(n_killed, na.rm = TRUE),
+    mean_killed = mean(n_killed, na.rm = TRUE),
+    q3_killed = quantile(n_killed, 0.75, na.rm = TRUE),
+    max_killed = max(n_killed, na.rm = TRUE),
+    sd_killed = sd(n_killed, na.rm = TRUE),
+    min_injured = min(n_injured, na.rm = TRUE),
+    q1_injured = quantile(n_injured, 0.25, na.rm = TRUE),
+    median_injured = median(n_injured, na.rm = TRUE),
+    mean_injured = mean(n_injured, na.rm = TRUE),
+    q3_injured = quantile(n_injured, 0.75, na.rm = TRUE),
+    max_injured = max(n_injured, na.rm = TRUE),
+    sd_injured = sd(n_injured, na.rm = TRUE)
+  ) %>%
+  arrange(desc(mean_count))
+
+# Round all summary statistics
+city_summary_stats <- city_summary_stats %>%
+  mutate(across(where(is.numeric), round, digits = 0))
+
+
+# Split the summary statistics into three different data frames
+city_summary_incidents <- city_summary_stats %>%
+  select(city, min_count, q1_count, median_count, mean_count, q3_count, max_count, sd_count)
+
+city_summary_killed <- city_summary_stats %>%
+  select(city, min_killed, q1_killed, median_killed, mean_killed, q3_killed, max_killed, sd_killed)
+
+city_summary_injured <- city_summary_stats %>%
+  select(city, min_injured, q1_injured, median_injured, mean_injured, q3_injured, max_injured, sd_injured)
+
+# Convert each summary statistics data frame to a flextable
+ft_incidents_city <- flextable(city_summary_incidents) %>%
+  set_header_labels(
+    city = "City",
+    min_count = "Min Incident", q1_count = "Q1 Incident", median_count = "Median Incident", 
+    mean_count = "Mean Incident", q3_count = "Q3 Incident", max_count = "Max Incident", 
+    sd_count = "SD Incident"
+  ) %>%
+  add_header_row(values = "Table 5a: City Summary Statistics of Gun Violence Incidents per Year (2014-2017)", colwidths = 8) %>%
+  padding(padding = 3, part = "all") %>%
+  add_footer_lines(values = "Source: Gun Violence Archive") %>%
+  theme_vanilla() %>%
+  autofit()
+
+ft_killed_city <- flextable(city_summary_killed) %>%
+  set_header_labels(
+    city = "City",
+    min_killed = "Min Killed", q1_killed = "Q1 Killed", median_killed = "Median Killed", 
+    mean_killed = "Mean Killed", q3_killed = "Q3 Killed", max_killed = "Max Killed", 
+    sd_killed = "SD Killed"
+  ) %>%
+  add_header_row(values = "Table 5b: City Summary Statistics of Gun Violence Deaths per Year (2014-2017)", colwidths = 8) %>%
+  padding(padding = 3, part = "all") %>%
+  add_footer_lines(values = "Source: Gun Violence Archive") %>%
+  theme_vanilla() %>%
+  autofit()
+
+ft_injured_city <- flextable(city_summary_injured) %>%
+  set_header_labels(
+    city = "City",
+    min_injured = "Min Injured", q1_injured = "Q1 Injured", median_injured = "Median Injured", 
+    mean_injured = "Mean Injured", q3_injured = "Q3 Injured", max_injured = "Max Injured", 
+    sd_injured = "SD Injured"
+  ) %>%
+  add_header_row(values = "Table 5c: City Summary Statistics of Gun Violence Injuries per Year (2014-2017)", colwidths = 8) %>%
+  padding(padding = 3, part = "all") %>%
+  add_footer_lines(values = "Source: Gun Violence Archive") %>%
+  theme_vanilla() %>%
+  autofit()
+
+# Print the flextables
+ft_incidents_city
+```
+
+```{r}
+ft_killed_city
+```
+
+```{r}
+ft_injured_city
+```
+
+
+```{r}
+# Convert the city column to a factor with levels ordered by incidents_per_100k
+top_15_cities <- top_15_cities |>
+  mutate(city_state = factor(city_state, levels = city_state[order(incidents_per_100k, decreasing = FALSE)]))
+
+# Create the bar chart
+ggplot(top_15_cities, aes(x = city_state, y = incidents_per_100k)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    y = "Incidents per 100,000 People",
+    x = "City",
+    title = "Gun Violence Incidents per 100,000 People by city",
+    subtitle = "Year 2017",
+    caption = "Source: Gun Violence Archive & U.S. Census Bureau"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(vjust = 0.5)
+  ) +
+  coord_flip()
+
+n_killed_2017 <- gun_data_2017 |>
+  group_by(geoid) |>
+  summarise(n_killed = sum(n_killed), .groups = 'drop')
+
+top_15_cities <- top_15_cities |>
+  left_join(n_killed_2017, by = "geoid")
+
+# Calculate gun deaths per 100,000 people
+top_15_cities <- top_15_cities |>
+  mutate(prop_deaths = (n_killed / count))
+
+# Calculate gun deaths per 100,000 people
+top_15_cities <- top_15_cities |>
+  mutate(deaths_per_100k = (n_killed / population) * 100000)
+
+top_15_cities <- top_15_cities |>
+  mutate(city_state = factor(city_state, levels = city_state[order(deaths_per_100k, decreasing = FALSE)]))
+
+# Create the bar chart
+ggplot(top_15_cities, aes(x = city_state, y = deaths_per_100k)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    y = "Deaths per 100,000 People",
+    x = "City",
+    title = "Gun Violence Deaths per 100,000 People by city",
+    subtitle = "Year 2017",
+    caption = "Source: Gun Violence Archive & U.S. Census Bureau"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(vjust = 0.5)
+  ) +
+  coord_flip()
+```
+
+As we look at the data more granularly, a different picture starts to emerge.
+While at the state level, Alaska seems to be experiencing the most gun violence,
+no Alaskan city is within the top 15 most incident-prone cities. Analyzing the
+top 15 most incident-prone states through the lens of the most deadly, Saint
+Louis, MO, stands out, with 36% of all gun violence incidents ending in death
+in 2017. Let's dive a bit deeper to uncover more insights.
+
+### Visualization: Correlation plots
+
+With all the additional demographic data from the census dataset, I wanted to
+see if any of the added features might correlate with the deaths and incidents
+occurring within our dataset. From here on out, I will continue to look at the
+top 15 states with the highest levels of gun violence incidents in 2017.
+
+Adding 3 additional features to analyze. 
+
+* `rent_percentage`: The proportion of median annual rent cost to the median 
+annual income.
+
+* `home_percentage`: The proportion of median annual mortgage cost to the median 
+annual income.
+
+* `prop_deaths`: The proportion of gun violence incidents that produced a gun
+violence death
+
+I added these to see if these scores, in addition to any other macroeconomic
+data, might give us a better signal to correlate with deaths and incidents.
+
+```{r}
+# Adding rent_percentage and home_percentage to top_15_cities
+top_15_cities <- top_15_cities |>
+  mutate(
+    # rent_percentage: The proportion of median annual rent cost to the median annual income
+    rent_percentage = (median_monthly_rent_cost * 12) / median_income,
+    
+    # home_percentage: The proportion of median annual home cost to the median annual income
+    home_percentage = (median_monthly_home_cost * 12) / median_income
+  )
+
+# Function to rearrange columns by data type
+rearrange_by_data_type <- function(df) {
+  # Split the columns by data type
+  num_cols <- df |> select(where(is.numeric))
+  factor_cols <- df |> select(where(is.factor))
+  char_cols <- df |> select(where(is.character))
+  logical_cols <- df |> select(where(is.logical))
+  date_cols <- df |> select(where(is.Date))
+  
+  # Combine the columns back in the desired order
+  df_rearranged <- bind_cols(char_cols, factor_cols, date_cols, num_cols, logical_cols, )
+  
+  return(df_rearranged)
+}
+
+# Apply the function to rearrange columns by data type
+top_15_cities <- rearrange_by_data_type(top_15_cities)
+
+# selecting numeric columns to perform correlation matrix on
+numeric_columns <- top_15_cities |>
+  select(population:home_percentage)
+
+# Calculate the correlation matrix for the selected numeric columns
+correlation_matrix <- cor(numeric_columns, use = "complete.obs")
+
+# Extract correlations related to incidents_per_100k and deaths_per_100k
+correlation_incidents <- correlation_matrix["incidents_per_100k", ]
+correlation_deaths <- correlation_matrix["deaths_per_100k", ]
+
+# Extract the row corresponding to incidents_per_100k
+correlation_incidents <- correlation_matrix["incidents_per_100k", ]
+
+# Convert the extracted correlations to a data frame
+correlation_incidents_df <- as.data.frame(correlation_incidents)
+correlation_incidents_df$variable <- rownames(correlation_incidents_df)
+rownames(correlation_incidents_df) <- NULL
+
+# Create a diagonal matrix to visualize with ggcorrplot
+diag_matrix <- diag(0, ncol(correlation_matrix))
+rownames(diag_matrix) <- colnames(diag_matrix) <- colnames(correlation_matrix)
+diag_matrix["incidents_per_100k", ] <- correlation_matrix["incidents_per_100k", ]
+diag_matrix[, "incidents_per_100k"] <- correlation_matrix[, "incidents_per_100k"]
+diag_matrix <- as.data.frame(diag_matrix)
+diag_matrix <- diag_matrix |> select(incidents_per_100k)
+diag_matrix <- t(diag_matrix)
+
+# Plot the filtered correlation matrix using ggcorrplot
+ggcorrplot(as.matrix(diag_matrix),
+           hc.order = FALSE,
+           outline.color = "white",
+           lab = TRUE,
+           lab_size = 3,
+           title = "Correlation with Incidents per 100k") +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 10),
+    axis.text.y = element_text(size = 10),
+    plot.title = element_text(size = 15),
+    plot.subtitle = element_text(size = 10),
+    plot.margin = unit(c(1, 1, 1, 1), "cm")
+  ) +
+  coord_flip() 
+  
+```
+
+At the incidents per 100k people level, we get the strongest signal from the
+population, deaths per 100,000 people, and the proportion of deaths from an
+incident, which seems to be tacit. We see a very small signal from the gender
+demographic. As males tend to be more aggressive, it seems plausible that if
+they are less represented within the population, gun violence may decrease
+slightly. 
+
+```{r}
+# Convert the extracted correlations to a data frame
+correlation_deaths_df <- as.data.frame(correlation_deaths)
+correlation_deaths_df$variable <- rownames(correlation_deaths_df)
+rownames(correlation_deaths_df) <- NULL
+
+# Create a diagonal matrix to visualize with ggcorrplot
+diag_matrix <- diag(0, ncol(correlation_matrix))
+rownames(diag_matrix) <- colnames(diag_matrix) <- colnames(correlation_matrix)
+diag_matrix["deaths_per_100k", ] <- correlation_matrix["deaths_per_100k", ]
+diag_matrix[, "deaths_per_100k"] <- correlation_matrix[, "deaths_per_100k"]
+diag_matrix <- as.data.frame(diag_matrix)
+diag_matrix <- diag_matrix |> select(deaths_per_100k)
+diag_matrix <- t(diag_matrix)
+
+# Plot the filtered correlation matrix using ggcorrplot
+ggcorrplot(as.matrix(diag_matrix),
+           hc.order = FALSE,
+           outline.color = "white",
+           lab = TRUE,
+           lab_size = 3,
+           title = "Correlation with Deaths per 100k") +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 10),
+    axis.text.y = element_text(size = 10),
+    plot.title = element_text(size = 15),
+    plot.subtitle = element_text(size = 10),
+    plot.margin = unit(c(1, 1, 1, 1), "cm")
+  ) +
+  coord_flip()
+```
+
+When correlating our features with deaths per 100,000 people, we see a different
+picture. It seems that poverty has a moderate influence on the deadliness of an
+American city. Our added scores regarding the cost of living are seemingly a
+function of the median income and/or the proportion of poverty, so I chose to 
+focus on poverty itself to see if we can gain some insight into its effects.
+
+# Function of poverty
+
+## Visualization: Scatter plots with linear regression lines
+
+Here, I plotted our incidents per 100,000 people in a scatter plot with a
+correlation line with respect to the proportion of the population within the
+city living in poverty.
+
+```{r}
+p <- top_15_cities |>
+  ggplot(
+    aes(
+      x = incidents_per_100k,
+      y = prop_poverty
+    )
+  ) +
+  geom_point(
+    aes(
+      text = paste(
+        "City:", city_state,
+        "<br>Incidents per 100k:", round(incidents_per_100k, digits = 1),
+        "<br>Proportion in Poverty:", percent(prop_poverty, accuracy = 0.1)
+        )
+      )
+    ) +
+  # Add a linear regression line for each facet/group, colored blue
+  geom_smooth(
+    method = "lm", # linear model
+    se = FALSE, # standard error visible
+    size = 1, 
+    color = "red"
+  )  +
+  labs(
+    title = "Incidents per 100k by proportion of poverty",
+    subtitle = "Top 15 cities in 2017",
+    x = "Incidents per 100k",   
+    y = "Proportion of city population in poverty",
+    caption = "Source: Gun Violence Archive & U.S. Census Bureau"
+  ) +
+    scale_y_continuous(labels = percent, breaks = seq(0, 0.5, by = 0.02)) +
+
+  theme_bw()
+
+# Convert the ggplot2 plot to an interactive plotly plot with custom tooltips
+p_plotly <- ggplotly(p, tooltip = "text")
+
+# Manually add the subtitle and caption
+p_plotly <- p_plotly |>
+  layout(
+    title = list(
+      text = "Incidents per 100k by proportion of poverty<br><sup>Top 15 cities in 2017</sup>"
+    ),
+    annotations = list(
+      list(
+        x = 0, 
+        y = -0.13,  # Adjust the y position to move the caption up slightly
+        text = "Source: Gun Violence Archive & U.S. Census Bureau", 
+        showarrow = FALSE, 
+        xref = 'paper', 
+        yref = 'paper', 
+        xanchor = 'left', 
+        yanchor = 'auto', 
+        xshift = 0, 
+        yshift = 0,
+        font = list(size = 8)
+      )
+    ),
+    margin = list(t = 80, b = 100)  # Add extra margin to accommodate the caption
+  )
+
+# Display the interactive plot
+p_plotly
+```
+
+The regression line is nearly flat, which is a direct reflection of the 
+correlation matrix in the previous section.
+
+```{r}
+q <- top_15_cities |>
+  ggplot(
+    aes(
+      x = deaths_per_100k,
+      y = prop_poverty
+    )
+  ) +
+  geom_point(
+    aes(
+      text = paste(
+        "City:", city_state,
+        "<br>Deaths per 100k:", round(deaths_per_100k, digits = 1),
+        "<br>Proportion in Poverty:", percent(prop_poverty, accuracy = 0.1)
+        )
+      )
+    ) +
+  # Add a linear regression line for each facet/group, colored blue
+  geom_smooth(
+    method = "lm", # linear model
+    se = FALSE, # standard error visible
+    size = 1, 
+    color = "red"
+  )  +
+  labs(
+    title = "Deaths per 100k by proportion of poverty",
+    subtitle = "Top 15 cities in 2017",
+    x = "Deaths per 100k",   
+    y = "Proportion of city population in poverty",
+    caption = "Source: Gun Violence Archive & U.S. Census Bureau"
+  ) +
+  scale_y_continuous(labels = percent, breaks = seq(0, 0.5, by = 0.02)) +
+  theme_bw()
+
+# Convert the ggplot2 plot to an interactive plotly plot with custom tooltips
+q_plotly <- ggplotly(q, tooltip = "text")
+
+# Manually add the subtitle and caption
+q_plotly <- q_plotly |>
+  layout(
+    title = list(
+      text = "Deaths per 100k by proportion of poverty<br><sup>Top 15 cities in 2017</sup>"
+    ),
+    annotations = list(
+      list(
+        x = 0, 
+        y = -0.13,  # Adjust the y position to move the caption up slightly
+        text = "Source: Gun Violence Archive & U.S. Census Bureau", 
+        showarrow = FALSE, 
+        xref = 'paper', 
+        yref = 'paper', 
+        xanchor = 'left', 
+        yanchor = 'auto', 
+        xshift = 0, 
+        yshift = 0,
+        font = list(size = 8)
+      )
+    ),
+    margin = list(t = 80, b = 100)  # Add extra margin to accommodate the caption
+  )
+
+# Display the interactive plot
+q_plotly
+```
+
+When we plot our deaths per 100,000 people with regard to poverty, our
+regression line changes dramatically. We do, however, have four cities that are
+above a 20% poverty threshold. Although the evidence seems strong enough to
+support an inference, I want to establish statistical significance to support
+a hypothesis.
+
+## Monte Carlo Methods of Inference
+
+### Hypothesis
+
+Given the relationship between poverty and gun violence observed in the
+preliminary analysis, I hypothesize that cities with higher poverty levels
+experience a greater number of gun violence deaths per 100,000 people.
+Specifically:
+
+$$H_0: \mu_1 \le \mu_2 \text{ vs. } H_a: \mu_1 > \mu_2$$
+
+Where $\mu_1$ is the average number of gun violence deaths per 100,000 people in
+low poverty cities, and $\mu_2$ is the average number of gun violence deaths per
+100,000 people in high poverty cities.
+
+```{r}
+# Divide cities into low and high poverty groups
+prop_poverty_threshold <- median(top_15_cities$prop_poverty)
+low_poverty_cities <- top_15_cities %>% filter(prop_poverty <= prop_poverty_threshold)
+high_poverty_cities <- top_15_cities %>% filter(prop_poverty > prop_poverty_threshold)
+
+val <- round(prop_poverty_threshold * 100, digits = 1)
+
+low_poverty_cities <- low_poverty_cities |>
+  select(
+    -(1:5),
+    -(7:18),
+    -(20:21)
+    )
+
+high_poverty_cities <- high_poverty_cities |>
+  select(
+    -(1:5),
+    -(7:18),
+    -(20:21)
+    )
+
+# Stacking data frames
+stacked_data <- bind_rows(low_poverty_cities, high_poverty_cities)
+
+stacked_data <- stacked_data %>%
+  mutate(Poverty_Level = case_when(
+    row_number() <= 8 ~ "Low poverty cities",
+    row_number() > 8 ~ "High poverty cities"
+  ))
+
+stacked_data <- stacked_data |>
+  select(city_state, Poverty_Level, deaths_per_100k)
+```
+
+To test this hypothesis, I divided the top 15 cities into low and high poverty
+groups based on the median proportion (`r val`%) of the population living in poverty.
+
+```{r}
+stacked_ft <- flextable(stacked_data) %>%
+  set_header_labels(
+    city_state = "City, State",
+    Poverty_Level = "Poverty Level",
+    deaths_per_100k = "Deaths per 100k"
+  ) %>%
+  add_header_row(values = "Table 6: 15 Deadliest Cities by Poverty Rate (2017)", colwidths = 3) %>%
+  padding(padding = 3, part = "all") %>%
+  add_footer_lines(values = "Source: Gun Violence Archive & U.S. Census Bureau") %>%
+  theme_vanilla() %>%
+  autofit()
+
+stacked_ft
+```
+
+### Visualization: Comparison of Gun Violence Deaths
+
+The first visualization compares the number of gun violence deaths per 100,000
+people between low poverty and high poverty cities. This box plot displays the
+distribution of gun violence deaths for both groups.
+
+```{r}
+stacked_data |>
+  ggplot(
+    aes(
+      x = Poverty_Level,
+      y = deaths_per_100k,
+      fill = Poverty_Level
+    )
+  ) +
+  stat_boxplot(geom = "errorbar", width = 0.2, coef = 1.5) +
+  stat_boxplot(geom = "boxplot", width = 0.5, coef = 1.5,
+               outlier.shape = 8) +
+  stat_summary(fun = "mean", geom = "point", shape = 23, fill = "black",
+               color = "white") +
+  scale_fill_manual(values = c("#009E73", "#56B4E9")) +
+  coord_flip() +
+  labs(
+    y = "Number of Deaths per 100,000 people",
+    title = "Comparison of Gun Violence Deaths",
+    caption = "Source: Gun Violence Archive & U.S. Census Bureau"
+    ) +
+  theme(legend.position = "none")
+```
+
+**Key observations from the box plot**:
+
+**Low Poverty Cities**: The box plot shows a relatively narrow range of deaths
+per 100,000 people, indicating less variability within this group. The median
+number of deaths is lower, and the whiskers suggest fewer extreme values.
+
+**High Poverty Cities**: The box plot for high poverty cities reveals a much
+wider range of deaths per 100,000 people, with a higher median and more
+variability. This indicates a greater spread of gun violence incidents in
+these cities, including some with very high death rates.
+
+This visualization supports the hypothesis that cities with higher poverty
+levels experience more gun violence deaths, highlighting the need to explore
+further the impact of socioeconomic factors on gun violence.
+
+### Visualization: Empirical Density Curves and Dot Plot
+
+The second visualization provides an empirical density curve and dot plot
+comparing the number of gun violence deaths per 100,000 people between low
+poverty and high poverty cities. This visualization helps to highlight the
+distribution and density of gun violence deaths in both groups.
+
+```{r}
+stacked_data |> 
+  ggplot(aes(x = deaths_per_100k,
+             fill = Poverty_Level)) +
+  geom_dotplot() +
+  geom_density(color = "black", alpha = 0.6) +
+    scale_fill_manual(values = c("#009E73", "#56B4E9")) +
+  facet_grid(Poverty_Level ~ .) +
+    labs(x = "Number of Deaths per 100,000 people",
+         title = "Empirical Density Curves and Dot Plot",
+         y = "Density") +
+  theme(legend.position = "none") +
+  ylim(0, 0.09)
+```
+
+**Key observations from the density curves and dot plot**:
+
+**Low Poverty Cities**: The density curve for low poverty cities shows a higher
+peak, indicating that most cities in this group have a lower number of deaths
+per 100,000 people. The dot plot reinforces this by showing a concentration of
+points at lower death rates.
+
+**High Poverty Cities**: The density curve for high poverty cities is relatively
+flat, suggesting a wider spread of death rates within this group. The dot plot
+shows that these cities have a broader range of gun violence death rates, with
+some cities experiencing significantly higher death rates.
+
+### Assumption Checking for T-Tests
+
+#### Checking Normality
+
+Before proceeding with the t-test, it is essential to verify if the data follows
+a normal distribution. The Shapiro-Wilk test was used to assess the normality of
+the gun violence death rates per 100,000 people in both low and high poverty
+cities.
+
+```{r}
+# Check for normality
+shapiro_low <- shapiro.test(stacked_data$deaths_per_100k[stacked_data$Poverty_Level == "Low poverty cities"])
+shapiro_high <- shapiro.test(stacked_data$deaths_per_100k[stacked_data$Poverty_Level == "High poverty cities"])
+
+# Extract the results into a data frame
+shapiro_low_df <- data.frame(
+  Statistic = shapiro_low$statistic,
+  p_value = shapiro_low$p.value,
+  Method = shapiro_low$method,
+  Data = "Low poverty cities"
+)
+
+shapiro_high_df <- data.frame(
+  Statistic = shapiro_high$statistic,
+  p_value = shapiro_high$p.value,
+  Method = shapiro_high$method,
+  Data = "High poverty cities"
+)
+
+shapiro_low_df |> flextable() |>
+  set_caption("Result from Shapiro-Wilk Normality Test for Low poverty cities") |>
+  padding(padding = 3, part = "all") %>%
+  theme_vanilla() %>%
+  autofit()
+```
+
+```{r}
+shapiro_high_df |> flextable() |>
+  set_caption("Result from Shapiro-Wilk Normality Test for High poverty cities") |>
+  padding(padding = 3, part = "all") %>%
+  theme_vanilla() %>%
+  autofit()
+```
+**Results**:
+
+**Low Poverty Cities**: The Shapiro-Wilk test statistic is 0.89 with a
+p-value of 0.22, indicating that we do not reject the null hypothesis of
+normality. Therefore, the data for low poverty cities can be considered
+normally distributed.
+
+**High Poverty Cities**: The Shapiro-Wilk test statistic is 0.86 with a
+p-value of 0.16, indicating that we do not reject the null hypothesis of
+normality. Thus, the data for high poverty cities can also be considered
+normally distributed.
+
+Both groups meet the normality assumption necessary for conducting the t-test.
+However, it's important to note that with a small sample size (n = 15), the
+power of the normality test may be limited, and the results should be interpreted
+with caution.
+
+#### Checking Equal Variance
+
+Next, I assess the assumption of equal variance between the two groups using
+the standard deviations and variances of gun violence death rates per 100,000
+people.
+
+```{r}
+# Calculating standard deviations and variances for each group
+stacked_data |> 
+  group_by(Poverty_Level) |> 
+  summarize(Mean = mean(deaths_per_100k),
+            n = n(),
+            SD = sd(deaths_per_100k),
+            Variance = var(deaths_per_100k)) |> 
+  flextable() |> 
+  colformat_double(digits = 3) |> 
+  padding(padding = 3, part = "all") %>%
+  theme_vanilla() %>%
+  autofit()
+```
+
+**Results**:
+
+**High Poverty Cities**: The mean death rate is 29.9 with a standard
+deviation of 22 and a variance of 485.507.
+
+**Low Poverty Cities**: The mean death rate is 11.2 with a standard
+deviation of 4 and a variance of 15.8.
+
+The results show that the variances are not equal, with high poverty cities
+having a significantly larger variance than low poverty cities. Therefore, the
+assumption of equal variance is violated.
+
+Given these results, we will use Welch's t-test, which does not assume equal
+variances, to compare the gun violence death rates between low and high poverty
+cities.
+
+### Welch's t-test
+
+```{r}
+# Perform Welch's t-test
+welch_t_result <- t.test(deaths_per_100k ~ Poverty_Level, data = stacked_data, alternative = "greater", var.equal = FALSE)
+
+# Extract the results into a data frame
+welch_t_result_df <- data.frame(
+  Statistic = welch_t_result$statistic,
+  t_df = welch_t_result$parameter,
+  p_value = welch_t_result$p.value,
+  Alternative = welch_t_result$alternative,
+  Estimate = welch_t_result$estimate,
+  Lower_CI = welch_t_result$conf.int[1],
+  Upper_CI = welch_t_result$conf.int[2]
+)
+
+# Convert the data frame to a flextable
+welch_t_result_ft <- welch_t_result_df |>
+  flextable() |>
+  set_caption("Results of Welch's t-test comparing rates of gun violence deaths between the low poverty cities and high poverty cities groups.") |>
+  padding(padding = 3, part = "all") %>%
+  theme_vanilla() %>%
+  autofit()
+
+# Print the flextable
+welch_t_result_ft
+```
+**Results**:
+
+* The Welch's t-test statistic is 2.219969, and the degrees of freedom (t_df) is
+6.342214.
+
+* The p-value is 0.03290321, indicating a statistically significant difference
+in death rates between the two groups.
+
+* The alternative hypothesis specifies that the death rate is greater in high
+poverty cities.
+
+* The mean estimate for high poverty cities is 29.9, while for low poverty
+cities, it is 11.2.
+
+* The confidence interval for the difference in means ranges from 2.494976 to
+infinity.
+
+These results indicate that gun violence death rates are significantly higher in
+high poverty cities compared to low poverty cities, supporting the hypothesis
+that poverty levels are associated with increased gun violence deaths.
+
+### Permutation Testing
+
+To further validate the results of the Welch's t-test, we performed a permutation
+test. This method helps to assess the robustness of our findings by generating
+a distribution of t-statistics under the null hypothesis through 1000 random
+permutations.
+
+```{r}
+# Set the number of permutations
+nperms <- 1000
+
+# Initialize a vector to store the permuted test statistics
+permTs <- vector(length = nperms)
+
+# Calculate the observed Welch's t-test statistic
+observed_t <- t.test(
+  deaths_per_100k ~ Poverty_Level, 
+  data = stacked_data, 
+  alternative = "greater", 
+  var.equal = FALSE
+  )$statistic
+
+# Perform the permutation test
+set.seed(1986) # For reproducibility
+
+for (p in 1:nperms) {
+  permuted_data <- stacked_data %>%
+    mutate(
+      Poverty_Level = sample(Poverty_Level, replace = FALSE)
+      )
+  permTs[p] <- t.test(
+    deaths_per_100k ~ Poverty_Level, 
+    data = permuted_data, 
+    alternative = "greater", 
+    var.equal = FALSE
+    )$statistic
+}
+
+# Calculate the p-value
+p_value <- mean(permTs >= observed_t)
+
+# Create a data frame for the p-value result
+p_value_df <- data.frame(
+  Statistic = c("Observed t-statistic", "Permutation p-value"),
+  Value = c(round(observed_t, 2), round(p_value, 3))
+)
+
+# Display the p-value result using flextable
+p_value_ft <- p_value_df |>
+  flextable() |>
+  set_caption("Permutation Test Results") |>
+  padding(padding = 3, part = "all") %>%
+  theme_vanilla() %>%
+  autofit() 
+
+# Print the flextable
+p_value_ft
+```
+The permutation test p-value is 0.011, indicating that the observed t-statistic
+is rare under the null hypothesis.
+
+```{r}
+# Tally up
+tally_results <- janitor::tabyl(permTs >= observed_t)
+
+# Convert to a data frame for plotting
+tally_df <- as.data.frame(tally_results)
+
+# Create a bar plot to visualize the tally results
+ggplot(tally_df, aes(x = `permTs >= observed_t`, y = n)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_text(aes(label = n), vjust = -0.3) +
+  labs(
+    title = "Tally of Permuted t-Statistics Greater Than or Equal to Observed t-Statistic",
+    x = "Permuted t-Statistic >= Observed t-Statistic",
+    y = "Count"
+  ) +
+  theme_minimal()
+```
+
+The bar plot visualizes the tally of permutations greater than or equal to the
+observed t-statistic, reinforcing the significance of our original t-test
+results.
+
+```{r}
+# Visualize the permutation distribution
+perm_df <- data.frame(permTs = permTs)
+
+max_y <- max(table(cut(permTs, breaks = seq(min(permTs), max(permTs), by = 0.1)))) + 2
+
+
+ggplot(perm_df, aes(x = permTs)) +
+  geom_histogram(binwidth = 0.1, fill = "steelblue", color = "white") +
+  geom_vline(aes(xintercept = observed_t), color = "dodgerblue",  linetype = "dashed") +
+  geom_vline(xintercept = quantile(permTs, probs = 0.95), color = "red") +
+  theme_minimal() +
+  labs(title = "Permutation Distribution of t-Statistics",
+       x = "Permuted t-Statistics",
+       y = "Frequency") +
+  annotate("text", x = observed_t, y = max_y, 
+           label = paste("Observed t-statistic:", round(observed_t, 2)), color = "dodgerblue", hjust = 0.9) +
+  theme_minimal()
+```
+The histogram of permuted t-statistics shows the distribution of t-values
+generated from the permutations.
+
+**Statistical Decision**
+
+Given the evidence from Welch's t-test and the permutation test, we reject the
+null hypothesis ($H_0: \mu_1 \le \mu_2$) in favor of the alternative hypothesis
+($H_a: \mu_1 > \mu_2$). This decision is supported by:
+
+* A p-value of 0.0329 from Welch's t-test, which is less than the common alpha
+level of 0.05.
+
+* A permutation p-value of 0.011, indicating that the observed t-statistic is
+unlikely to occur by chance.
+
+**Conclusion**: There is statistically significant evidence to conclude that
+cities with higher poverty levels experience higher gun violence death rates
+compared to cities with lower poverty levels.
+
+This analysis underscores the critical impact of socioeconomic factors on gun
+violence and highlights the need for targeted interventions in high poverty
+areas to reduce gun violence deaths.
+
+## Bootstrapping
+
+To further analyze the data, we performed a bootstrapping procedure to estimate
+the distribution of the median number of deaths per 100,000 people in high
+poverty cities. Bootstrapping allows us to generate multiple samples from the
+original dataset and compute the statistic of interest, providing a robust
+estimate of its distribution.
+
+```{r}
+high_poverty <- stacked_data |>
+  filter(Poverty_Level == "High poverty cities")
+
+# Number of bootstrap samples
+B <- 10000
+
+# Instantiating matrix for bootstrap samples
+boots <- matrix(NA, nrow = nrow(high_poverty), ncol = B)
+
+# Sampling with replacement B times
+for(b in 1:B) {
+boots[, b] <- high_poverty |> 
+  slice_sample(prop = 1, replace = TRUE) |> 
+  dplyr::pull(deaths_per_100k)
+}
+
+# Instantiating vector for bootstrap medians
+boot_medians <- vector(length = B)
+
+# Calculating medians for bootstrap samples
+for(b in 1:B) {
+boot_medians[b] <- median(boots[, b])
+}
+
+tibble(Median = boot_medians) |>
+  ggplot(aes(x = Median)) +
+  geom_histogram(fill = "steelblue", color = "white") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) + 
+  labs(title = "Non Parametric bootstrap distribution for the median",
+       x = "Test statistic value",
+       y = "Frequency") +
+  geom_vline(xintercept = quantile(boot_medians, probs = c(0.025, 0.975)), color = "red", linetype = "dotted") +
+  theme_minimal()
+```
+
+**Results**:
+
+* The histogram shows the distribution of bootstrap medians.
+
+* The vertical dotted lines represent the 2.5th and 97.5th percentiles of the
+bootstrap distribution, providing a 95% confidence interval for the median.
+
+```{r}
+# Estimating the standard error
+standard_error <- sd(boot_medians)
+
+# Calculating the 95% confidence interval
+confidence_interval <- quantile(boot_medians, probs = c(0.025, 0.975))
+
+# Create a data frame for the results
+results_df <- data.frame(
+  Statistic = c("Standard Error", "2.5th Percentile", "97.5th Percentile"),
+  Value = c(standard_error, confidence_interval[1], confidence_interval[2])
+)
+
+# Display the results using flextable
+library(flextable)
+
+results_ft <- results_df |>
+  flextable() |>
+  set_caption("Bootstrap Estimates for the Median") |>
+  padding(padding = 3, part = "all") %>%
+  theme_vanilla() |>
+  
+  autofit()
+
+# Print the flextable
+results_ft
+
+```
+
+**Bootstrap Confidence Interval Findings**:
+
+We are 95% confident that at least half of the cities with high poverty rates
+will experience a death rate from gun violence between 11.6 and 48 deaths per
+100,000 people.
+
+# Conclusion
+
+Gun ownership, legislation, and violence in America have always been complex and
+polarizing topics. Although gun ownership is woven into the fabric of the
+American identity through the Constitution and is seen as an essential right,
+that right is viewed by some as conflicting with efforts to solve the problem
+of gun violence.
+
+This analysis gets closer to untangling some of the mystery behind America's gun
+violence issues, but there is still more work to be done. Many more features
+could be added to get a better sense of what is causing a lethal increase in gun
+violence deaths in America. With more time and research, we may be able to reach
+a consensus on how to legislate and deal with the issue.
+
+I personally did not choose this project and had no preconceived notions about
+what evidence I would find, if any at all. I simply let the data lead my line of
+questioning. While I intuited that poverty had something to do with gun
+violence, I didn't know to what extent. I also did not anticipate the noticeable
+disparity between its effects on gun violence incidents versus deaths. Through
+this exercise, it became clear to me that the perspective by which we view the
+legislation of gun laws is often flawed. In this analysis, gun violence deaths
+are clearly a dependent variable, or an outcome. They are a function of another
+feature or set of features of American culture. Trying to solve a problem by
+focusing on the output instead of the input seems to only perpetuate the issue.
+
+Moreover, through this process and generally looking over some of the previously
+cited data regarding gun ownership in this country, an interesting pattern
+emerged that seemed worth exploring. I noticed that many of the states with the
+deadliest cities had some of the very lowest rates of gun ownership in the
+country. Despite this being anecdotal, it is a curious question that deserves a
+solid answer. The devil is in the details, and this multifaceted problem has no
+shortage of them.
+
+Regarding the statistical significance of poverty as a driver of lethality among
+states, one might posit that a lack of healthcare infrastructure in impoverished
+communities could be consequential to health outcomes vis-à-vis gun violence.
+Poor hospitals, a lack of hospitals, or poor emergency response times could be
+factors worth examining when thinking about how to improve the situation. Other
+potential social and psychological factors may be helpful but arduous to collect
+or rely on for accuracy. Furthermore, they may be clouded by ambiguity and not
+easily stated.
+
+Being from Baltimore, Maryland, the second deadliest city in America in 2017, it
+is hard to see the poverty and violence. Knowing that right around the corner,
+my fellow Americans are residing in a war zone is unsettling, to say the least.
+I would personally like to see more careful analysis and concerted effort among
+legislators to pinpoint effective ways to ameliorate gun violence in America.
+Only through thorough research, open dialogue, and targeted interventions can
+we hope to make meaningful progress in addressing this critical issue. 
+
+
+
