@@ -1,6 +1,6 @@
 # Third Graduate Machine Learning Project Highlights
 
-This project was a collaborative effort with Steve Meadows and Brooke Walters, focusing on a complex cross-modal learning challenge.
+This project was a collaborative effort with Lauryn Davis and Brooke Walters, focusing on a complex cross-modal learning challenge.
 
 ## Project Overview
 
