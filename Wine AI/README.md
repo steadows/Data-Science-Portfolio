@@ -1,7 +1,10 @@
 # Wine AI  
 Predicting Tasting Note Probabilities from Climate Time Series and Varietal Data
 
-**Note**: To view the full report, please download and open the `Wine_AI_Report.html` file locally in a web browser.
+**Note**: **To view the full report, please download and open the** `Wine_AI_Report.html` **file locally in a web browser.**
+
+- Click the WineAI.html file above
+- Then click three dots in top right corner and select download
 
 This project explores how environmental factors influence the descriptive language used in wine reviews. Specifically, we modeled the probability of 1,416 tasting note keywords appearing in a wine's review using only climate time series data (from March 1 to November 1, 2022) and grape varietal identifiers. No text-based features from the reviews themselves were used in training, making the project an investigation into how climate conditions and grape genetics contribute to sensory language in wine.
 
