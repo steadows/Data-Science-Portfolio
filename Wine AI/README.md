@@ -42,4 +42,4 @@ The full write-up, including model performance, SHAP plots, factor loadings, and
 
 ## Acknowledgments
 
-Grateful to my project partners **Steve Meadows** and **Brooke Walters** for an outstanding collaboration this semester. Huge thanks to **Zach DeBruine** for your consistent guidance, feedback, and support throughout the course.
+Grateful to my project partners **Lauryn Davis** and **Brooke Walters** for an outstanding collaboration this semester. Huge thanks to **Zach DeBruine** for your consistent guidance, feedback, and support throughout the course.
