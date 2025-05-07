@@ -69,7 +69,7 @@ Below is a summary of the projects included in this folder, organized by the cor
 
 ### 💻 Software Development
 
-- **[Baby Name Picker](./Baby-Name-Picker)**  
+- **[Baby Name Picker](https://github.com/steadows/Data-Science-Portfolio/tree/main/Computer%20Science%20/Baby%20Name%20Picker)**  
   **Language**: Java  
   **Description**: A console application that helps parents collaboratively choose baby names by selecting and rating names. Identifies highly rated names and top averages. Personally significant for naming my son, Miles Meadows.  
   **Key Concepts**: Object-oriented design, user input handling, set operations, interactive CLI.
