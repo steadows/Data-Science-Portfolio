@@ -1,0 +1,239 @@
+Steve Meadows
+CIS 660
+Section 01
+Winter '24
+Lab 1
+
+description" : "This dataset shows the Battery Electric Vehicles (BEVs) and Plug-in Hybrid Electric Vehicles (PHEVs) that are currently registered through Washington State Department of Licensing (DOL)."
+
+
+1. 
+
+input:
+
+function insertVehicle(
+    vin, county, city, state, postalCode,
+    modelYear, make, model, evType,
+    cafvEligibility, electricRange, baseMSRP,
+    legislativeDistrict, dolVehicleId,
+    vehicleLocation, electricUtility, censusTract
+) {
+    const document = {
+        "VIN (1-10)": vin,
+        "County": county,
+        "City": city,
+        "State": state,
+        "Postal Code": postalCode,
+        "Model Year": modelYear,
+        "Make": make,
+        "Model": model,
+        "Electric Vehicle Type": evType,
+        "Clean Alternative Fuel Vehicle (CAFV) Eligibility": cafvEligibility,
+        "Electric Range": electricRange,
+        "Base MSRP": baseMSRP,
+        "Legislative District": legislativeDistrict,
+        "DOL Vehicle ID": dolVehicleId,
+        "Vehicle Location": vehicleLocation,
+        "Electric Utility": electricUtility,
+        "2020 Census Tract": censusTract
+    };
+
+    const result = db.EVs.insertOne(document);
+
+    if (result.writeError) {
+        print(`Failed to insert document: ${result.writeError.errmsg}`);
+    } else {
+        const insertedId = result.insertedId;
+        print(`Successfully inserted document with _id: ${insertedId}`);
+    }
+}
+
+insertVehicle(
+    "1GKS2HKC2F", "Snohomish", "Bothell", "WA", 98012,
+    2024, "BMW", "X5", "Plug-in Hybrid Electric Vehicle (PHEV)",
+    "Clean Alternative Fuel Vehicle Eligible", 39, 0,
+    46, 256410164,
+    "POINT (-122.319115 47.66132)", "CITY OF SEATTLE - (WA)|CITY OF TACOMA - (WA)",
+    53033004101
+);
+insertVehicle(
+    "JTHDU46F97", "Thurston", "Olympia", "WA", 98502,
+    2023, "BMW", "X1", "Plug-in Hybrid Electric Vehicle (PHEV)",
+    "Clean Alternative Fuel Vehicle Eligible", 200, 0,
+    46, 256410164,
+    "POINT (-122.319115 47.66132)", "CITY OF SEATTLE - (WA)|CITY OF TACOMA - (WA)",
+    53033004101
+);
+insertVehicle(
+    "3C6JD6AP2C", "King", "Bellevue", "WA", 98006,
+    2020, "KIA", "NIRO", "Battery Electric Vehicle (BEV)",
+    "Clean Alternative Fuel Vehicle Eligible", 240, 0,
+    46, 256410164,
+    "POINT (-122.319115 47.66132)", "CITY OF SEATTLE - (WA)|CITY OF TACOMA - (WA)",
+    53033004101
+);
+insertVehicle(
+    "WBA3B5C58E", "King", "Seattle", "WA", 98105,
+    2023, "TESLA", "MODEL Y", "Plug-in Hybrid Electric Vehicle (PHEV)",
+    "Clean Alternative Fuel Vehicle Eligible", 500, 0,
+    46, 256410164,
+    "POINT (-122.319115 47.66132)", "PUGET SOUND ENERGY INC",
+    53033004101
+);
+insertVehicle(
+    "YV1TS92D6V", "Yakima", "Selah", "WA", 98942,
+    2022, "FORD", "FUSION", "Plug-in Hybrid Electric Vehicle (PHEV)",
+    "Clean Alternative Fuel Vehicle Eligible", 22, 0,
+    46, 256410164,
+    "POINT (-122.319115 47.66132)", "CITY OF SEATTLE - (WA)|CITY OF TACOMA - (WA)",
+    53033004101
+);
+
+output: (see word doc)
+
+
+2.  input: db.EVs.find({ "_id" : ObjectId("65ac4a8bd347591cf6d6eaf9") })
+    output: [
+        {
+            _id: ObjectId('65ac4a8bd347591cf6d6eaf9'),
+            'VIN (1-10)': '3C6JD6AP2C',
+            County: 'King',
+            City: 'Bellevue',
+            State: 'WA',
+            'Postal Code': 98006,
+            'Model Year': 2020,
+            Make: 'KIA',
+            Model: 'NIRO',
+            'Electric Vehicle Type': 'Battery Electric Vehicle (BEV)',
+            'Clean Alternative Fuel Vehicle (CAFV) Eligibility': 'Clean Alternative Fuel Vehicle Eligible',
+            'Electric Range': 240,
+            'Base MSRP': 0,
+            'Legislative District': 46,
+            'DOL Vehicle ID': 256410164,
+            'Vehicle Location': 'POINT (-122.319115 47.66132)',
+            'Electric Utility': 'CITY OF SEATTLE - (WA)|CITY OF TACOMA - (WA)',
+            '2020 Census Tract': 53033004101
+        }
+      ]
+3.  input: db.EVs.find({ $and: [{ City: "Seattle" }, { "Model Year": { $lte: 2005 } }] })
+    output: [
+        { 
+            _id: ObjectId('65ac36f023d9604c403c9fd8'),
+            'VIN (1-10)': '1FTZR0817Y',
+            County: 'King',
+            City: 'Seattle',
+            State: 'WA',
+            'Postal Code': 98117,
+            'Model Year': 2000,
+            Make: 'FORD',
+            Model: 'RANGER',
+            'Electric Vehicle Type': 'Battery Electric Vehicle (BEV)',
+            'Clean Alternative Fuel Vehicle (CAFV) Eligibility': 'Clean Alternative Fuel Vehicle Eligible',
+            'Electric Range': 58,
+            'Base MSRP': 0,
+            'Legislative District': 36,
+            'DOL Vehicle ID': 142611402,
+            'Vehicle Location': 'POINT (-122.37275 47.68968)',
+            'Electric Utility': 'CITY OF SEATTLE - (WA)|CITY OF TACOMA - (WA)',
+            '2020 Census Tract': Long('53033001500')    
+        }
+    ]
+4.  input: db.EVs.find({ $or: [ { $and: [{ Make: "TESLA" }, { "Electric Range": { $gte: 360 } }] }, { $and: [{ Make: "BMW" }, { "Electric Range": { $gte: 200 } }] }] })
+    output: [
+        {
+          _id: ObjectId('65ac4a8bd347591cf6d6eaf8'),
+          'VIN (1-10)': 'JTHDU46F97',
+          County: 'Thurston',
+          City: 'Olympia',
+          State: 'WA',
+          'Postal Code': 98502,
+          'Model Year': 2023,
+          Make: 'BMW',
+          Model: 'X1',
+          'Electric Vehicle Type': 'Plug-in Hybrid Electric Vehicle (PHEV)',
+          'Clean Alternative Fuel Vehicle (CAFV) Eligibility': 'Clean Alternative Fuel Vehicle Eligible',
+          'Electric Range': 200,
+          'Base MSRP': 0,
+          'Legislative District': 46,
+          'DOL Vehicle ID': 256410164,
+          'Vehicle Location': 'POINT (-122.319115 47.66132)',
+          'Electric Utility': 'CITY OF SEATTLE - (WA)|CITY OF TACOMA - (WA)',
+          '2020 Census Tract': 53033004101
+        },
+        {
+          _id: ObjectId('65ac4a8bd347591cf6d6eafa'),
+          'VIN (1-10)': 'WBA3B5C58E',
+          County: 'King',
+          City: 'Seattle',
+          State: 'WA',
+          'Postal Code': 98105,
+          'Model Year': 2023,
+          Make: 'TESLA',
+          Model: 'MODEL Y',
+          'Electric Vehicle Type': 'Plug-in Hybrid Electric Vehicle (PHEV)',
+          'Clean Alternative Fuel Vehicle (CAFV) Eligibility': 'Clean Alternative Fuel Vehicle Eligible',
+          'Electric Range': 500,
+          'Base MSRP': 0,
+          'Legislative District': 46,
+          'DOL Vehicle ID': 256410164,
+          'Vehicle Location': 'POINT (-122.319115 47.66132)',
+          'Electric Utility': 'PUGET SOUND ENERGY INC',
+          '2020 Census Tract': 53033004101
+        }
+      ]
+
+5.  input:  db.EVs.updateOne( {"VIN (1-10)": "WBA3B5C58E"}, {$set: { "Model": "MODEL S"} } )
+
+    output: {
+        acknowledged: true,
+        insertedId: null,
+        matchedCount: 1,
+        modifiedCount: 1,
+        upsertedCount: 0
+      }
+6.  input:  try {
+                db.EVs.updateMany(
+                        {$and: [ {"Make": "TESLA"},  {"Model Year": 2023}, {"County": "Snohomish"}, {"Model": "MODEL S"}, {"Postal Code": 98275 } ]},
+                        { $set: { "Electric Range" : 1000 } }
+                    );
+                } catch (e) {
+                print(e);
+            }
+    output: {
+        acknowledged: true,
+        insertedId: null,
+        matchedCount: 5,
+        modifiedCount: 5,
+        upsertedCount: 0
+      }
+7.  input:  db.EVs.deleteMany( {Make: "BMW"} )
+    output: { acknowledged: true, deletedCount: 7206 }
+
+extra credit:
+
+What I wanted to do was find out how many Hyundai EV's were registered in the state of Washington and I wanted to find out the sums by their model. Here's the query I came up with:
+
+db.EVs.aggregate([
+    {
+      $match: { Make: "HYUNDAI" }
+    },
+    {
+      $group: {
+        _id: "$Model",
+        totalQuantity: { $sum: 1 } // Assuming you want to count the number of documents
+      }
+    }
+  ])
+
+This was the output:
+
+[
+    { _id: 'KONA', totalQuantity: 220 },
+    { _id: 'SONATA', totalQuantity: 73 },
+    { _id: 'IONIQ 6', totalQuantity: 265 },
+    { _id: 'SANTA FE', totalQuantity: 191 },
+    { _id: 'IONIQ', totalQuantity: 222 },
+    { _id: 'KONA ELECTRIC', totalQuantity: 661 },
+    { _id: 'IONIQ 5', totalQuantity: 2250 },
+    { _id: 'TUCSON', totalQuantity: 175 }
+  ]
