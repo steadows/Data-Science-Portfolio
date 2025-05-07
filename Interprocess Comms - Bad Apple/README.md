@@ -1,5 +1,11 @@
 # 🍎 Bad Apple: Signal-Based Message Passing with Sabotage Simulation
 
+[![C](https://img.shields.io/badge/Built%20With-C-00599C?logo=c&logoColor=white)](https://en.wikipedia.org/wiki/C_(programming_language))
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+![Status](https://img.shields.io/badge/status-Completed-brightgreen)
+![Last Updated](https://img.shields.io/badge/last%20updated-May%202025-orange)
+
+
 **Authors**: Steve Meadows
 **Project**: Inter-Process Communication and Signal Handling
 
