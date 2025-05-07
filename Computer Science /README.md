@@ -25,7 +25,7 @@ Below is a summary of the projects included in this folder, organized by the cor
 
 ### 🧮 Data Structures and Algorithms
 
-- **[Dominating Set Finder](./Dominating-Set-Finder)**  
+- **[Dominating Set Finder](https://github.com/steadows/Data-Science-Portfolio/tree/main/Computer%20Science%20/Dominating%20Set)**  
   **Language**: Java  
   **Description**: Implements a greedy approximation algorithm to compute minimum dominating sets in labeled graphs. Uses adjacency matrices and label constraints to find the smallest set of nodes that dominates the graph.  
   **Key Concepts**: Graph theory, greedy algorithms, set operations, object-oriented design.
@@ -51,7 +51,7 @@ Below is a summary of the projects included in this folder, organized by the cor
   **Description**: Applies discrete mathematics to validate graph degree sequences, ensuring they adhere to the properties of simple graphs.  
   **Key Concepts**: Graph theory, degree sequences, combinatorial validation.
 
-- **[Dominating Set Finder](./Dominating-Set-Finder)**  
+- **[Dominating Set Finder](https://github.com/steadows/Data-Science-Portfolio/tree/main/Computer%20Science%20/Dominating%20Set)**  
   **Description**: Leverages set theory and graph properties to identify dominating sets, incorporating label constraints for complex graph structures.  
   **Key Concepts**: Set theory, graph domination, combinatorial optimization.
 
