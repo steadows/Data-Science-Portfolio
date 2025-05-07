@@ -30,24 +30,24 @@ Below is a summary of the projects included in this folder, organized by the cor
   **Description**: Implements a greedy approximation algorithm to compute minimum dominating sets in labeled graphs. Uses adjacency matrices and label constraints to find the smallest set of nodes that dominates the graph.  
   **Key Concepts**: Graph theory, greedy algorithms, set operations, object-oriented design.
 
-- **[Havel-Hakimi Algorithm](./Havel-Hakimi)**  
+- **[Havel-Hakimi Algorithm](https://github.com/steadows/Data-Science-Portfolio/tree/main/Computer%20Science%20/Havel-Hakimi-Algorithm)**  
   **Language**: Python  
   **Description**: Verifies whether a degree sequence can represent a simple undirected graph using the Havel-Hakimi theorem. Implements a recursive approach to validate graphical sequences.  
   **Key Concepts**: Graph theory, recursion, sequence processing.
 
-- **[Floyd-Warshall Algorithm](./Floyd-Warshall)**  
+- **[Floyd-Warshall Algorithm](https://github.com/steadows/Data-Science-Portfolio/tree/main/Computer%20Science%20/Warshalls-Algorithm)**  
   **Language**: Python  
   **Description**: Computes all-pairs shortest paths in a directed weighted graph using dynamic programming. Processes adjacency matrices to output shortest path distances.  
   **Key Concepts**: Dynamic programming, graph algorithms, matrix operations.
 
-- **[Greedy Graph Coloring Algorithm](./Graph-Coloring)**  
+- **[Greedy Graph Coloring Algorithm](https://github.com/steadows/Data-Science-Portfolio/tree/main/Computer%20Science%20/Greedy-Algorithm)**  
   **Language**: Python  
   **Description**: Assigns the minimum number of colors to graph vertices such that no adjacent vertices share the same color, using a greedy strategy.  
   **Key Concepts**: Graph coloring, greedy algorithms, dictionary-based data structures.
 
 ### ➗ Discrete Mathematics
 
-- **[Havel-Hakimi Algorithm](./Havel-Hakimi)**  
+- **[Havel-Hakimi Algorithm](https://github.com/steadows/Data-Science-Portfolio/tree/main/Computer%20Science%20/Havel-Hakimi-Algorithm)**  
   **Description**: Applies discrete mathematics to validate graph degree sequences, ensuring they adhere to the properties of simple graphs.  
   **Key Concepts**: Graph theory, degree sequences, combinatorial validation.
 
@@ -57,12 +57,12 @@ Below is a summary of the projects included in this folder, organized by the cor
 
 ### 🖧 Operating Systems
 
-- **[Bad Apple: Signal-Based Message Passing](./Bad-Apple)**  
+- **[Bad Apple: Signal-Based Message Passing](https://github.com/steadows/Data-Science-Portfolio/tree/main/Computer%20Science%20/Interprocess%20Comms%20-%20Bad%20Apple)**  
   **Language**: C  
   **Description**: Simulates a network of processes passing a message through pipes, with a randomly selected "bad apple" node scrambling the message. Demonstrates inter-process communication and signal handling.  
   **Key Concepts**: IPC, pipes, signal handling (`SIGINT`), process forking, synchronization.
 
-- **[Baking Project: Multithreading & Synchronization](./Baking-Project)**  
+- **[Baking Project: Multithreading & Synchronization](https://github.com/steadows/Data-Science-Portfolio/tree/main/Computer%20Science%20/Multithreading%20-%20Baking%20Project)**  
   **Language**: C  
   **Description**: Simulates a multi-baker kitchen using POSIX threads and semaphores, with shared resources and a "Gordon Ramsay" thread that randomly sabotages bakers.  
   **Key Concepts**: Multithreading, semaphores, resource contention, signal handling, synchronization.
@@ -74,12 +74,12 @@ Below is a summary of the projects included in this folder, organized by the cor
   **Description**: A console application that helps parents collaboratively choose baby names by selecting and rating names. Identifies highly rated names and top averages. Personally significant for naming my son, Miles Meadows.  
   **Key Concepts**: Object-oriented design, user input handling, set operations, interactive CLI.
 
-- **[Memory Card Game](./Memory-Card-Game)**  
+- **[Memory Card Game](https://github.com/steadows/Data-Science-Portfolio/tree/main/Computer%20Science%20/Memory%20Game%20(Android%20App))**  
   **Language**: Java (Android)  
   **Description**: An Android app for a single-player memory card game with Traditional and Time Trial modes. Features card flipping, level progression, and UI testing.  
   **Key Concepts**: Mobile development, UI design, event-driven programming, testing (Espresso).
 
-- **[Java Workout Generator](./Workout-Generator)**  
+- **[Java Workout Generator](https://github.com/steadows/Data-Science-Portfolio/tree/main/Computer%20Science%20/Workout-Generator)**  
   **Language**: Java  
   **Description**: Generates randomized home gym workouts (Strength, Tabata, EMOM) with tapered training schedules. Built to automate workout planning during COVID lockdowns.  
   **Key Concepts**: Object-oriented design, randomization, CLI interface, modular programming.
