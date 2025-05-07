@@ -24,7 +24,7 @@ The projects in this portfolio aim to:
 
 ## 📂 Projects
 
-### 🏋️ [Gym Management Database](./Gym-Management-Database)
+### 🏋️ [Gym Management Database](https://github.com/steadows/Data-Science-Portfolio/tree/main/Databases/Gym%20Management%20Database)
 **Technologies**: Oracle SQL  
 **Description**: A relational database system to manage gym operations across multiple franchises. Tracks locations, employees, members, classes, and memberships, ensuring efficient operations and compliance with age restrictions and instructor qualifications. Includes complex queries for trend analysis (e.g., popular classes, locations).  
 **Key Skills**:
@@ -32,7 +32,7 @@ The projects in this portfolio aim to:
 - SQL table creation, data population, and querying (joins, subqueries, aggregations).
 - Integrity constraints (primary keys, foreign keys, check constraints).
 
-### 🚗 [Electric Vehicle Database Management](./Electric-Vehicle-Database)
+### 🚗 [Electric Vehicle Database Management](https://github.com/steadows/Data-Science-Portfolio/tree/main/Databases/PyMongo%20CRUD%20Ops)
 **Technologies**: MongoDB, Python (PyMongo)  
 **Description**: A Python application for managing electric vehicle (EV) records in a MongoDB database. Provides a CLI for CRUD operations (Create, Read, Update, Delete) and aggregation queries to analyze trends (e.g., vehicle counts by make). Additionally, I integrated MongoDB with AWS S3 to store and retrieve vehicle data, enhancing scalability.  
 **Key Skills**:
