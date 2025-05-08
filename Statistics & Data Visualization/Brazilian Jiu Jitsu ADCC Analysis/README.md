@@ -85,38 +85,6 @@ The project features multiple interactive Tableau dashboards, as detailed in the
 - **Global Trends**: Certain countries produce disproportionately successful fighters, potentially linked to regional training styles.
 - **Strategic Implications**: The rise of leg locks underscores the need for modern BJJ practitioners to prioritize leg attack and defense training.
 
-## 🛠️ Setup and Installation
-
-### Prerequisites
-- **Tableau**: Tableau Desktop or Tableau Public (2020 or higher).
-- **Datasets**: `ADCC_Historical.csv` and `ADCC_Fighter_Stats.csv` from Kaggle.
-
-### Installation
-1. Clone or download the project repository.
-2. Place the datasets in the project directory.
-3. Open the Tableau workbook (`.twb` or `.twbx`) in Tableau Desktop or Tableau Public.
-4. Ensure the datasets are correctly linked to the workbook.
-
-### Viewing Dashboards
-- Open the Tableau workbook to interact with the dashboards.
-- Use filters to customize views (e.g., by sex, year, or weight class).
-- Alternatively, view static outputs in the provided PDFs (`241110_final_project_submissions_dashboard_1.pdf`, `241110_final_project_submissions_dashboard_2.pdf`, `241110_final_project_submissions_dashboard_3.pdf`).
-
-## 📈 Usage
-
-1. Launch Tableau and open the project workbook.
-2. Navigate through the dashboards to explore submissions, fighter performance, and global trends.
-3. Use interactive filters to tailor the analysis to specific needs (e.g., weight class or competition year).
-4. Apply insights to inform training strategies or competition preparation.
-
-## 📜 Example Output
-
-- **Pie Chart**: Chokes (35%) and leg submissions (25%) dominate ADCC victories.
-- **Line Chart**: Leg submissions increased 3x from 2000 to 2022.
-- **Stacked Bar Chart**: Shows a shift from arm locks to leg submissions in recent years.
-- **Win Ratio by Country**: Highlights countries with win ratios above the mean (1.7).
-- **Submission Variety**: Fighters with 1-2 submission types have higher z-scored win ratios.
-
 ## 🌟 Personal Significance
 
 As a BJJ practitioner, this project deepened my understanding of the sport’s competitive landscape. It reinforced the value of specialization, echoing Bruce Lee’s philosophy: *“I fear not the man who has practiced 10,000 kicks once, but I fear the man who has practiced one kick 10,000 times.”* The dashboards provide a practical tool for myself and others to refine training and strategy.
