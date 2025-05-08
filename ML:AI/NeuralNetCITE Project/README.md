@@ -83,3 +83,4 @@ This project focuses on predicting **Antibody-Derived Tag (ADT)** expression pro
 - **Optimization**: Bayesian optimization identified optimal hyperparameters, reducing manual tuning effort.
 - **Generalization**: Balanced model complexity to avoid overfitting, validated by consistent validation metrics (e.g., R², MAE, RMSE).
 
+## To View Project, click 'NeuralNetCITE.html' link above to download and view.
