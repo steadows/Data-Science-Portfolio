@@ -144,4 +144,6 @@ This project is licensed under the MIT License. Feel free to use, modify, and sh
 🏷️ Tags
 Machine Learning, Kaggle, Bioinformatics, Deep Learning, Feature Engineering
 
-This project leverages machine learning to connect climate data with wine tasting notes, providing actionable insights for winemakers through advanced modeling and feature engineering.```
+This project leverages machine learning to connect climate data with wine tasting notes, providing actionable insights for winemakers through advanced modeling and feature engineering.
+
+## To view project, click the 'WineAI.html' link above to download and view
