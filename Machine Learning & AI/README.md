@@ -23,8 +23,8 @@ GitHub: [@steadows](https://github.com/steadows/data-science-portfolio)
   - Optimized KNN with Manhattan distance, log transformation, exponential decay (sigma = 1.5), and soft zero weighting (scalar = 0.25).
   - Reduced runtime by 60% (from 10 to 4 minutes) using parallel processing with `doParallel`.
 - **Technologies**: R, `doParallel`, `tidyverse`, `plotly`.
-- **Directory**: [kNN Recommender System/](https://github.com/steadows/Data-Science-Portfolio/tree/main/ML%3AAI/kNN%20Recommender%20System)
-- **Link**: [kNN_Recommender_System_Birds.html](https://github.com/steadows/Data-Science-Portfolio/blob/main/ML%3AAI/kNN%20Recommender%20System/kNN_Recommender_System_Birds.html)
+- **Directory**: [kNN Recommender System/](https://github.com/steadows/Data-Science-Portfolio/tree/main/Machine%20Learning%20%26%20AI/kNN%20Recommender%20System)
+- **Link**: [kNN_Recommender_System_Birds.html](https://github.com/steadows/Data-Science-Portfolio/blob/main/Machine%20Learning%20%26%20AI/kNN%20Recommender%20System/kNN_Recommender_System_Birds.html)
 
 ### 2. Kaggle Challenge Two: Abstract Neural Evolution for ADT Prediction 🧬
 - **Objective**: Predict Antibody-Derived Tag (ADT) expression from RNA sequencing data using a feedforward neural network (FNN).
@@ -33,8 +33,8 @@ GitHub: [@steadows](https://github.com/steadows/data-science-portfolio)
   - Used Bayesian optimization (`ParBayesianOptimization`) to tune hyperparameters, achieving optimal settings (e.g., learning rate = 0.0013, dropout = 0.19).
   - Balanced model complexity with techniques like dropout (0.19–0.35), batch normalization, and ensemble modeling.
 - **Technologies**: R, PyTorch, `tidyverse`, `plotly`.
-- **Directory**: [NeuralNetCITE Project/](https://github.com/steadows/Data-Science-Portfolio/tree/main/ML%3AAI/NeuralNetCITE%20Project)
-- **Link**: [NeuralNetCITE.html](https://github.com/steadows/Data-Science-Portfolio/blob/main/ML%3AAI/NeuralNetCITE%20Project/NeuralNetCITE.html)
+- **Directory**: [NeuralNetCITE Project/](https://github.com/steadows/Data-Science-Portfolio/tree/main/Machine%20Learning%20%26%20AI/NeuralNetCITE%20Project)
+- **Link**: [NeuralNetCITE.html](https://github.com/steadows/Data-Science-Portfolio/blob/main/Machine%20Learning%20%26%20AI/NeuralNetCITE%20Project/NeuralNetCITE.html)
 
 ### 3. Third Graduate Machine Learning Project: Cross-Modal Variational Autoencoder 🧬
 - **Objective**: Predict ADT protein expression from RNA data in unpaired single-cell sequencing datasets using a variational autoencoder (VAE) with adversarial training.
@@ -43,7 +43,7 @@ GitHub: [@steadows](https://github.com/steadows/data-science-portfolio)
   - Developed a robust VAE architecture with modality-specific encoders/decoders and a shared latent space, enhanced by Wasserstein GAN with Gradient Penalty (WGAN-GP).
   - Utilized multi-objective Bayesian optimization (via Meta’s `Ax`) to balance reconstruction accuracy and latent space integration.
 - **Technologies**: Python, PyTorch, PyTorch Lightning, `shiny` (for interactive visualizations).
-- **Directory**: [Cross_Modal_VAE/](Cross_Modal_VAE/)
+- **Directory**: [Cross_Modal_VAE/]([Cross_Modal_VAE/](https://github.com/steadows/Data-Science-Portfolio/tree/main/Machine%20Learning%20%26%20AI/Cross%20Modal%20VAE))
 - **Link**: [Cross_Modal_VAE](https://ldavis9997.shinyapps.io/Biological_VAE/)
 
 ### 4. Kaggle Challenge Four: Predicting Wine Tasting Notes from Climate Data 🍷
@@ -53,8 +53,8 @@ GitHub: [@steadows](https://github.com/steadows/data-science-portfolio)
   - Engineered features using DistilBERT embeddings and KMeans clustering, identifying key predictors like `num_rainy_days` and `word_entropy`.
   - Tuned the Transformer model with Ax and BoTorch, optimizing hyperparameters (e.g., learning rate = 2e-4, `d_model` = 256).
 - **Technologies**: Python, PyTorch, LightGBM, `transformers`, `sklearn`.
-- **Directory**: [Wine AI/](https://github.com/steadows/Data-Science-Portfolio/tree/main/ML%3AAI/Wine%20AI)
-- **Link**: [WineAI.html](https://github.com/steadows/Data-Science-Portfolio/blob/main/ML%3AAI/Wine%20AI/WineAI.html)
+- **Directory**: [Wine AI/](https://github.com/steadows/Data-Science-Portfolio/tree/main/Machine%20Learning%20%26%20AI/Wine%20AI)
+- **Link**: [WineAI.html](https://github.com/steadows/Data-Science-Portfolio/blob/main/Machine%20Learning%20%26%20AI/Wine%20AI/WineAI.html)
 
 ## 💡 Key Skills Demonstrated
 
