@@ -43,7 +43,7 @@ GitHub: [@steadows](https://github.com/steadows/data-science-portfolio)
   - Developed a robust VAE architecture with modality-specific encoders/decoders and a shared latent space, enhanced by Wasserstein GAN with Gradient Penalty (WGAN-GP).
   - Utilized multi-objective Bayesian optimization (via Meta’s `Ax`) to balance reconstruction accuracy and latent space integration.
 - **Technologies**: Python, PyTorch, PyTorch Lightning, `shiny` (for interactive visualizations).
-- **Directory**: [Cross_Modal_VAE/](Cross_Modal_VAE/)
+- **Directory**: [Cross Modal VAE/](https://github.com/steadows/Data-Science-Portfolio/tree/main/ML%3AAI/Cross%20Modal%20VAE/)
 - **Link**: [Cross_Modal_VAE](https://ldavis9997.shinyapps.io/Biological_VAE/)
 
 ### 4. Kaggle Challenge Four: Predicting Wine Tasting Notes from Climate Data 🍷
