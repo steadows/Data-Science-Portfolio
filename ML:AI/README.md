@@ -7,7 +7,7 @@
 
 ## 📘 Overview
 
-This folder showcases my machine learning and AI projects, demonstrating my ability to tackle diverse challenges in bioinformatics, environmental science, and predictive modeling. These projects were completed as part of Kaggle Challenges during my coursework in Grand Valley’s CIS 678 Machine Learning course, with one additional graduate project on cross-modal learning. I collaborated with Lauryn Davis and Brooke Walters on all projects, leveraging advanced algorithms, feature engineering, and optimization techniques to achieve strong results. Below is a summary of each project, with links to their respective directories for detailed insights.
+This folder showcases my machine learning and AI projects, demonstrating my ability to tackle diverse challenges in bioinformatics, environmental science, and predictive modeling. These projects were completed as part of Kaggle Challenges during my coursework in Grand Valley’s CIS 678 Machine Learning course. Our teams took 1st place for projects 1 & 2, and 2nd place for projects 3 and 4. I collaborated with Lauryn Davis and Brooke Walters on all projects, leveraging advanced algorithms, feature engineering, and optimization techniques to achieve strong results. Below is a summary of each project, with links to their respective directories for detailed insights.
 
 **Author**: Steve Meadows  
 GitHub: [@steadows](https://github.com/steadows/data-science-portfolio)  
