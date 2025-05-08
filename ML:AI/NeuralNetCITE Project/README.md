@@ -17,14 +17,6 @@ This project focuses on predicting **Antibody-Derived Tag (ADT)** expression pro
 - **Compare Approaches**: Benchmark the neural network against a traditional multiple linear regression model.
 - **Ensure Generalization**: Balance model complexity to avoid overfitting while maintaining robust predictions.
 
-## 📂 Project Structure
-
-### Files
-- **`Kaggle_Challenge_2_Draft.Rmd`**: R Markdown document detailing the project, including exploratory data analysis (EDA), model development, hyperparameter tuning, and results.
-- **`Images/`**: Directory with visualizations (e.g., network diagrams, PCA plots).
-- **`Project Files/`**: Directory with precomputed results (e.g., `slope_df.rds`, `batch_test_df_relu.rds`).
-- **`Data/`**: Directory with datasets (`training_set_rna.csv`, `training_set_adt.csv`, `test_set_rna.csv`).
-
 ### Data
 - **Training Data**:
   - `training_set_rna.csv`: 4,000 cells × 639 gene expression features.
@@ -43,10 +35,6 @@ This project focuses on predicting **Antibody-Derived Tag (ADT)** expression pro
 
 ### Baseline Model: Multiple Linear Regression (MLR)
 - **Approach**: Used matrix algebra to implement MLR:
-  - Equation:  
-    ![ADT_train = RNA_train * B_hat](https://latex.codecogs.com/svg.latex?%5Cmathbf%7BADT_%7Btrain%7D%7D%20%3D%20%5Cmathbf%7BRNA_%7Btrain%7D%7D%20%5Ctimes%20%5Chat%7B%5Cmathbf%7BB%7D%7D)
-  - Solved for coefficients:  
-    ![B_hat = (RNA_train^T RNA_train)^{-1} RNA_train^T ADT_train](https://latex.codecogs.com/svg.latex?%5Chat%7B%5Cmathbf%7BB%7D%7D%20%3D%20%28%5Cmathbf%7BRNA_%7Btrain%7D%7D%5ET%20%5Cmathbf%7BRNA_%7Btrain%7D%7D%29%5E%7B-1%7D%20%5Cmathbf%7BRNA_%7Btrain%7D%7D%5ET%20%5Cmathbf%7BADT_%7Btrain%7D%7D)
 - **Performance**: Achieved a Pearson correlation of **0.8022** (R’s `lm()`: 0.80225).
 - **Limitation**: Marginal improvement (1%) over `lm()`, prompting a shift to deep learning.
 
