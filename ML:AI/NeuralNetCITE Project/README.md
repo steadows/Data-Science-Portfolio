@@ -43,8 +43,10 @@ This project focuses on predicting **Antibody-Derived Tag (ADT)** expression pro
 
 ### Baseline Model: Multiple Linear Regression (MLR)
 - **Approach**: Used matrix algebra to implement MLR:
-  - Equation: \( \mathbf{ADT_{train}} = \mathbf{RNA_{train}} \times \hat{\mathbf{B}} \)
-  - Solved for coefficients: \( \hat{\mathbf{B}} = (\mathbf{RNA_{train}}^T \mathbf{RNA_{train}})^{-1} \mathbf{RNA_{train}}^T \mathbf{ADT_{train}} \)
+  - Equation:  
+    ![ADT_train = RNA_train * B_hat](https://latex.codecogs.com/svg.latex?%5Cmathbf%7BADT_%7Btrain%7D%7D%20%3D%20%5Cmathbf%7BRNA_%7Btrain%7D%7D%20%5Ctimes%20%5Chat%7B%5Cmathbf%7BB%7D%7D)
+  - Solved for coefficients:  
+    ![B_hat = (RNA_train^T RNA_train)^{-1} RNA_train^T ADT_train](https://latex.codecogs.com/svg.latex?%5Chat%7B%5Cmathbf%7BB%7D%7D%20%3D%20%28%5Cmathbf%7BRNA_%7Btrain%7D%7D%5ET%20%5Cmathbf%7BRNA_%7Btrain%7D%7D%29%5E%7B-1%7D%20%5Cmathbf%7BRNA_%7Btrain%7D%7D%5ET%20%5Cmathbf%7BADT_%7Btrain%7D%7D)
 - **Performance**: Achieved a Pearson correlation of **0.8022** (R’s `lm()`: 0.80225).
 - **Limitation**: Marginal improvement (1%) over `lm()`, prompting a shift to deep learning.
 
@@ -82,5 +84,21 @@ This project focuses on predicting **Antibody-Derived Tag (ADT)** expression pro
 - **Model Selection**: Found shallower networks (e.g., 639→512→256→128→25) to be more consistent despite deeper networks achieving the highest score.
 - **Optimization**: Bayesian optimization identified optimal hyperparameters, reducing manual tuning effort.
 - **Generalization**: Balanced model complexity to avoid overfitting, validated by consistent validation metrics (e.g., R², MAE, RMSE).
+
+🔮 Future Improvements
+
+Feature Reduction: Revisit PCA-based feature reduction to potentially improve efficiency.
+Enhanced Ensembling: Use getLocalOptimums() from ParBayesianOptimization to identify multiple local optima for better ensemble models.
+Loss Weighting: Adjust the composite stopping metric to prioritize the training-validation loss gap for better generalization.
+Advanced Optimization: Explore additional optimization techniques (e.g., learning rate scheduling).
+
+👤 Author
+Steve MeadowsData Scientist | Machine Learning EnthusiastGitHub: @SteveMeadowsPortfolio: stevemeadows.com
+📜 License
+This project is licensed under the MIT License. Feel free to use, modify, and share.
+🏷️ Tags
+Machine Learning, Neural Networks, Kaggle, Bioinformatics, Hyperparameter Tuning
+
+This project demonstrates the power of deep learning in bioinformatics, achieving high accuracy in ADT prediction through careful model design and optimization.```
 
 ## To View Project, click 'NeuralNetCITE.html' link above to download and view.
